@@ -1,0 +1,11 @@
+[Protocol]
+exec=Zenon-qt '%u'
+protocol=Zenon
+input=none
+output=none
+helper=true
+listing=
+reading=false
+writing=false
+makedir=false
+deleting=false

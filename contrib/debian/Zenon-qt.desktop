@@ -1,0 +1,12 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=Zenon
+Comment=Zenon P2P Cryptocurrency
+Comment[fr]=Zenon, monnaie virtuelle cryptographique pair à pair
+Comment[tr]=Zenon, eşten eşe kriptografik sanal para birimi
+Exec=Zenon-qt %u
+Terminal=false
+Type=Application
+Icon=Zenon128
+MimeType=x-scheme-handler/Zenon;
+Categories=Office;Finance;

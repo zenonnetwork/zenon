@@ -1,0 +1,30 @@
+<!DOCTYPE RCC><RCC version="1.0">
+    <qresource prefix="/translations">
+        <file alias="bg">locale/Zenon_bg.qm</file>
+        <file alias="ca">locale/Zenon_ca.qm</file>
+        <file alias="cs">locale/Zenon_cs.qm</file>
+        <file alias="da">locale/Zenon_da.qm</file>
+        <file alias="de">locale/Zenon_de.qm</file>
+        <file alias="en">locale/Zenon_en.qm</file>
+        <file alias="en_US">locale/Zenon_en_US.qm</file>
+        <file alias="es">locale/Zenon_es.qm</file>
+        <file alias="fi">locale/Zenon_fi.qm</file>
+        <file alias="fr_FR">locale/Zenon_fr_FR.qm</file>
+        <file alias="hr">locale/Zenon_hr.qm</file>
+        <file alias="it">locale/Zenon_it.qm</file>
+        <file alias="ja">locale/Zenon_ja.qm</file>
+        <file alias="ko_KR">locale/Zenon_ko_KR.qm</file>
+        <file alias="nl">locale/Zenon_nl.qm</file>
+        <file alias="pl">locale/Zenon_pl.qm</file>
+        <file alias="pt">locale/Zenon_pt.qm</file>
+        <file alias="pt_BR">locale/Zenon_pt_BR.qm</file>
+        <file alias="ro_RO">locale/Zenon_ro_RO.qm</file>
+        <file alias="ru">locale/Zenon_ru.qm</file>
+        <file alias="sk">locale/Zenon_sk.qm</file>
+        <file alias="sv">locale/Zenon_sv.qm</file>
+        <file alias="tr">locale/Zenon_tr.qm</file>
+        <file alias="uk">locale/Zenon_uk.qm</file>
+        <file alias="zh_CN">locale/Zenon_zh_CN.qm</file>
+        <file alias="zh_TW">locale/Zenon_zh_TW.qm</file>
+    </qresource>
+</RCC>
