@@ -1,6 +1,7 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2017 The PIVX developers
+// Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -56,12 +57,9 @@
 #include <QSettings>
 #include <QTextDocument> // for Qt::mightBeRichText
 #include <QThread>
-
-#if QT_VERSION < 0x050000
-#include <QUrl>
-#else
 #include <QUrlQuery>
-#endif
+#include <QMouseEvent>
+
 
 #if BOOST_FILESYSTEM_VERSION >= 3
 static boost::filesystem::detail::utf8_codecvt_facet utf8;
@@ -94,11 +92,7 @@ QString dateTimeStr(qint64 nTime)
 QFont bitcoinAddressFont()
 {
     QFont font("Monospace");
-#if QT_VERSION >= 0x040800
     font.setStyleHint(QFont::Monospace);
-#else
-    font.setStyleHint(QFont::TypeWriter);
-#endif
     return font;
 }
 
@@ -107,13 +101,64 @@ void setupAddressWidget(QValidatedLineEdit* widget, QWidget* parent)
     parent->setFocusProxy(widget);
 
     widget->setFont(bitcoinAddressFont());
-#if QT_VERSION >= 0x040700
     // We don't want translators to use own addresses in translations
     // and this is the only place, where this address is supplied.
     widget->setPlaceholderText(QObject::tr("Enter a Zenon address (e.g. %1)").arg("ZQoL2x72i4FLujpsAm1cqqXUU77RgD1cpV"));
-#endif
     widget->setValidator(new BitcoinAddressEntryValidator(parent));
     widget->setCheckValidator(new BitcoinAddressCheckValidator(parent));
+}
+
+void setupAliasWidget(QValidatedLineEdit* widget, QWidget* parent)
+{
+    parent->setFocusProxy(widget);
+
+    widget->setFont(bitcoinAddressFont());
+    
+#if QT_VERSION >= 0x040700
+    widget->setPlaceholderText(QObject::tr("Enter a Node Alias (e.g. %1)").arg("node1"));
+#endif
+}
+
+void setupIPWidget(QValidatedLineEdit* widget, QWidget* parent)
+{
+    parent->setFocusProxy(widget);
+
+    widget->setFont(bitcoinAddressFont());
+#if QT_VERSION >= 0x040700
+    widget->setPlaceholderText(QObject::tr("Enter the VPS IP (e.g. %1)").arg("127.0.0.1:35993"));
+#endif
+}
+
+void setupPrivKeyWidget(QValidatedLineEdit* widget, QWidget* parent)
+{
+    parent->setFocusProxy(widget);
+
+    widget->setFont(bitcoinAddressFont());
+#if QT_VERSION >= 0x040700
+    widget->setPlaceholderText(QObject::tr("Enter a Node PivKey (e.g. %1)").arg("7oPq5jVXnM74gh879aaRgCi8gQmyYbJUifTRYhsDqhgrk5nbaUf"));
+#endif
+}
+
+void setupTXIDWidget(QValidatedLineEdit* widget, QWidget* parent)
+{
+    parent->setFocusProxy(widget);
+
+    widget->setFont(bitcoinAddressFont());
+#if QT_VERSION >= 0x040700
+    widget->setPlaceholderText(QObject::tr("Enter a TX Output (e.g. %1)").arg("2bcd3c84c84f87eaa86e4e56834c92937a07f9e18718810b92e0d0324456a57c"));
+#endif
+}
+
+void setupTXIDIndexWidget(QValidatedLineEdit* widget, QWidget* parent)
+{
+    parent->setFocusProxy(widget);
+
+    widget->setFont(bitcoinAddressFont());
+#if QT_VERSION >= 0x040700
+    // We don't want translators to use own addresses in translations
+    // and this is the only place, where this address is supplied.
+    widget->setPlaceholderText(QObject::tr("Enter a TX index (e.g. %1)").arg("1"));
+#endif
 }
 
 void setupAmountWidget(QLineEdit* widget, QWidget* parent)
@@ -139,13 +184,10 @@ bool parseBitcoinURI(const QUrl& uri, SendCoinsRecipient* out)
     }
     rv.amount = 0;
 
-#if QT_VERSION < 0x050000
-    QList<QPair<QString, QString> > items = uri.queryItems();
-#else
     QUrlQuery uriQuery(uri);
     QList<QPair<QString, QString> > items = uriQuery.queryItems();
-#endif
-    for (QList<QPair<QString, QString> >::iterator i = items.begin(); i != items.end(); i++) {
+    for (QList<QPair<QString, QString> >::iterator i = items.begin(); i != items.end(); i++)
+    {
         bool fShouldReturnFalse = false;
         if (i->first.startsWith("req-")) {
             i->first.remove(0, 4);
@@ -225,11 +267,7 @@ bool isDust(const QString& address, const CAmount& amount)
 
 QString HtmlEscape(const QString& str, bool fMultiLine)
 {
-#if QT_VERSION < 0x050000
-    QString escaped = Qt::escape(str);
-#else
     QString escaped = str.toHtmlEscaped();
-#endif
     escaped = escaped.replace(" ", "&nbsp;");
     if (fMultiLine) {
         escaped = escaped.replace("\n", "<br>\n");
@@ -254,18 +292,29 @@ void copyEntryData(QAbstractItemView* view, int column, int role)
     }
 }
 
+QString getEntryData(QAbstractItemView *view, int column, int role)
+{
+    if(!view || !view->selectionModel())
+        return QString();
+    QModelIndexList selection = view->selectionModel()->selectedRows(column);
+
+    if(!selection.isEmpty()) {
+        // Return first item
+        return (selection.at(0).data(role).toString());
+    }
+    return QString();
+}
+
 QString getSaveFileName(QWidget* parent, const QString& caption, const QString& dir, const QString& filter, QString* selectedSuffixOut)
 {
     QString selectedFilter;
     QString myDir;
     if (dir.isEmpty()) // Default to user documents location
     {
-#if QT_VERSION < 0x050000
-        myDir = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation);
-#else
         myDir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-#endif
-    } else {
+    }
+    else
+    {
         myDir = dir;
     }
     /* Directly convert path to native OS path separators */
@@ -302,12 +351,10 @@ QString getOpenFileName(QWidget* parent, const QString& caption, const QString& 
     QString myDir;
     if (dir.isEmpty()) // Default to user documents location
     {
-#if QT_VERSION < 0x050000
-        myDir = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation);
-#else
         myDir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-#endif
-    } else {
+    }
+    else
+    {
         myDir = dir;
     }
     /* Directly convert path to native OS path separators */
@@ -344,6 +391,34 @@ bool checkPoint(const QPoint& p, const QWidget* w)
 bool isObscured(QWidget* w)
 {
     return !(checkPoint(QPoint(0, 0), w) && checkPoint(QPoint(w->width() - 1, 0), w) && checkPoint(QPoint(0, w->height() - 1), w) && checkPoint(QPoint(w->width() - 1, w->height() - 1), w) && checkPoint(QPoint(w->width() / 2, w->height() / 2), w));
+}
+
+void openFileInTextMode(const boost::filesystem::path& p)
+{
+    if (boost::filesystem::exists(p))
+#if defined(Q_OS_MAC)
+        QProcess::startDetached("open", QStringList() << "-e" << boostPathToQString(p));
+#else
+        QDesktopServices::openUrl(QUrl::fromLocalFile(boostPathToQString(p)));
+#endif
+    else
+        error("File does not exist: %s", p.string().c_str());
+}
+
+void openFileInDefaultApp(const QString& p)
+{
+    if (boost::filesystem::exists(qstringToBoostPath(p)))
+        QDesktopServices::openUrl(QUrl::fromLocalFile(p));
+    else
+        error("File does not exist: %s", p.toStdString());
+}
+
+void openURL(const QString& url)
+{
+    if (!url.isEmpty())
+        QDesktopServices::openUrl(url);
+    else
+        error("%s - url is empty", __func__);
 }
 
 void openDebugLogfile()
@@ -457,11 +532,7 @@ void TableViewLastColumnResizingFixer::disconnectViewHeadersSignals()
 // Refactored here for readability.
 void TableViewLastColumnResizingFixer::setViewHeaderResizeMode(int logicalIndex, QHeaderView::ResizeMode resizeMode)
 {
-#if QT_VERSION < 0x050000
-    tableView->horizontalHeader()->setResizeMode(logicalIndex, resizeMode);
-#else
     tableView->horizontalHeader()->setSectionResizeMode(logicalIndex, resizeMode);
-#endif
 }
 
 void TableViewLastColumnResizingFixer::resizeColumn(int nColumnIndex, int width)
@@ -926,6 +997,9 @@ QString formatServicesStr(quint64 mask)
             case NODE_BLOOM_WITHOUT_MN:
                 strList.append(QObject::tr("BLOOM"));
                 break;
+            case NODE_BLOOM_LIGHT_ZC:
+                strList.append(QObject::tr("ZK_BLOOM"));
+                break;
             default:
                 strList.append(QString("%1[%2]").arg(QObject::tr("UNKNOWN")).arg(check));
             }
@@ -941,6 +1015,11 @@ QString formatServicesStr(quint64 mask)
 QString formatPingTime(double dPingTime)
 {
     return dPingTime == 0 ? QObject::tr("N/A") : QString(QObject::tr("%1 ms")).arg(QString::number((int)(dPingTime * 1000), 10));
+}
+
+QString formatTimeOffset(int64_t nTimeOffset)
+{
+  return QString(QObject::tr("%1 s")).arg(QString::number((int)nTimeOffset, 10));
 }
 
 } // namespace GUIUtil

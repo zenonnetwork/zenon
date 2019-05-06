@@ -1,11 +1,13 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2017 The PIVX developers
+// Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "clientmodel.h"
 
+#include "bantablemodel.h"
 #include "guiconstants.h"
 #include "peertablemodel.h"
 
@@ -17,6 +19,7 @@
 #include "masternode-sync.h"
 #include "masternodeman.h"
 #include "net.h"
+#include "netbase.h"
 #include "ui_interface.h"
 #include "util.h"
 
@@ -31,12 +34,14 @@ static const int64_t nClientStartupTime = GetTime();
 ClientModel::ClientModel(OptionsModel* optionsModel, QObject* parent) : QObject(parent),
                                                                         optionsModel(optionsModel),
                                                                         peerTableModel(0),
+                                                                        banTableModel(0),
                                                                         cachedNumBlocks(0),
                                                                         cachedMasternodeCountString(""),
                                                                         cachedReindexing(0), cachedImporting(0),
                                                                         numBlocksAtStartup(-1), pollTimer(0)
 {
     peerTableModel = new PeerTableModel(this);
+    banTableModel = new BanTableModel(this);
     pollTimer = new QTimer(this);
     connect(pollTimer, SIGNAL(timeout()), this, SLOT(updateTimer()));
     pollTimer->start(MODEL_UPDATE_DELAY);
@@ -61,7 +66,7 @@ int ClientModel::getNumConnections(unsigned int flags) const
         return vNodes.size();
 
     int nNum = 0;
-    BOOST_FOREACH (CNode* pnode, vNodes)
+    for (CNode* pnode : vNodes)
         if (flags & (pnode->fInbound ? CONNECTIONS_IN : CONNECTIONS_OUT))
             nNum++;
 
@@ -182,6 +187,16 @@ void ClientModel::updateAlert(const QString& hash, int status)
     emit alertsChanged(getStatusBarWarnings());
 }
 
+void ClientModel::updateNewVersionAvailable()
+{
+    emit newVersionAvailable();
+}
+
+void ClientModel::updateDownloadProgress(const QString& title, int progress)
+{
+    emit refreshDownloadProgress(title, progress);
+}
+
 bool ClientModel::inInitialBlockDownload() const
 {
     return IsInitialBlockDownload();
@@ -214,6 +229,11 @@ PeerTableModel* ClientModel::getPeerTableModel()
     return peerTableModel;
 }
 
+BanTableModel *ClientModel::getBanTableModel()
+{
+    return banTableModel;
+}
+
 QString ClientModel::formatFullVersion() const
 {
     return QString::fromStdString(FormatFullVersion());
@@ -237,6 +257,11 @@ QString ClientModel::clientName() const
 QString ClientModel::formatClientStartupTime() const
 {
     return QDateTime::fromTime_t(nClientStartupTime).toString();
+}
+
+void ClientModel::updateBanlist()
+{
+    banTableModel->refresh();
 }
 
 // Handlers for core signals
@@ -263,12 +288,35 @@ static void NotifyAlertChanged(ClientModel* clientmodel, const uint256& hash, Ch
         Q_ARG(int, status));
 }
 
+static void NotifyUpdateAvailable(ClientModel* clientmodel)
+{
+    qDebug() << "NotifyUpdateAvailable()";
+    QMetaObject::invokeMethod(clientmodel, "updateNewVersionAvailable", Qt::QueuedConnection);
+}
+
+static void NotifyUpdateDownloadProgress(ClientModel* clientmodel, const std::string& title, int progress)
+{
+    qDebug() << QString::fromStdString(strprintf("NotifyUpdateDownloadProgress(%s, %d)", title, progress));
+    QMetaObject::invokeMethod(clientmodel, "updateDownloadProgress", Qt::QueuedConnection,
+        Q_ARG(QString, QString::fromStdString(title)),
+        Q_ARG(int, progress));
+}
+
+static void BannedListChanged(ClientModel *clientmodel)
+{
+    qDebug() << QString("%1: Requesting update for peer banlist").arg(__func__);
+    QMetaObject::invokeMethod(clientmodel, "updateBanlist", Qt::QueuedConnection);
+}
+
 void ClientModel::subscribeToCoreSignals()
 {
     // Connect signals to client
     uiInterface.ShowProgress.connect(boost::bind(ShowProgress, this, _1, _2));
     uiInterface.NotifyNumConnectionsChanged.connect(boost::bind(NotifyNumConnectionsChanged, this, _1));
     uiInterface.NotifyAlertChanged.connect(boost::bind(NotifyAlertChanged, this, _1, _2));
+    uiInterface.BannedListChanged.connect(boost::bind(BannedListChanged, this));
+    uiInterface.NotifyUpdateAvailable.connect(boost::bind(NotifyUpdateAvailable, this));
+    uiInterface.NotifyUpdateDownloadProgress.connect(boost::bind(NotifyUpdateDownloadProgress, this, _1, _2));
 }
 
 void ClientModel::unsubscribeFromCoreSignals()
@@ -277,4 +325,25 @@ void ClientModel::unsubscribeFromCoreSignals()
     uiInterface.ShowProgress.disconnect(boost::bind(ShowProgress, this, _1, _2));
     uiInterface.NotifyNumConnectionsChanged.disconnect(boost::bind(NotifyNumConnectionsChanged, this, _1));
     uiInterface.NotifyAlertChanged.disconnect(boost::bind(NotifyAlertChanged, this, _1, _2));
+    uiInterface.BannedListChanged.disconnect(boost::bind(BannedListChanged, this));
+    uiInterface.NotifyUpdateAvailable.disconnect(boost::bind(NotifyUpdateAvailable, this));
+    uiInterface.NotifyUpdateDownloadProgress.disconnect(boost::bind(NotifyUpdateDownloadProgress, this, _1, _2));
+}
+
+bool ClientModel::getTorInfo(std::string& ip_port) const
+{
+    proxyType onion;
+    if (GetProxy((Network) 3, onion) && IsReachable((Network) 3)) {
+        {
+            LOCK(cs_mapLocalHost);
+            for (const std::pair<const CNetAddr, LocalServiceInfo>& item : mapLocalHost) {
+                if (item.first.IsTor()) {
+                     CService addrOnion = CService(item.first.ToString(), item.second.nPort);
+                     ip_port = addrOnion.ToStringIPPort();
+                     return true;
+                }
+            }
+        }
+    }
+    return false;
 }

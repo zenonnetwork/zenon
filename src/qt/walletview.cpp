@@ -1,11 +1,12 @@
-// Copyright (c) 2011-2013 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
+// Copyright (c) 2011-2015 The Bitcoin developers
+// Copyright (c) 2016-2018 The PIVX developers
+// Copyright (c) 2018-2019 The Zenon developers
+// Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "walletview.h"
 
 #include "addressbookpage.h"
-#include "askpassphrasedialog.h"
 #include "bip38tooldialog.h"
 #include "bitcoingui.h"
 #include "blockexplorer.h"
@@ -35,12 +36,12 @@
 #include <QPushButton>
 #include <QSettings>
 #include <QVBoxLayout>
-#include <QInputDialog>
+#include <QInputDialog> 
 
 WalletView::WalletView(QWidget* parent) : QStackedWidget(parent),
                                           clientModel(0),
                                           walletModel(0)
-{
+{   
     // Create tabs
     overviewPage = new OverviewPage();
     explorerWindow = new BlockExplorer(this);
@@ -213,7 +214,7 @@ void WalletView::setWalletModel(WalletModel* walletModel)
             this, SLOT(processNewTransaction(QModelIndex, int, int)));
 
         // Ask for passphrase if needed
-        connect(walletModel, SIGNAL(requireUnlock()), this, SLOT(unlockWallet()));
+        connect(walletModel, SIGNAL(requireUnlock(AskPassphraseDialog::Context)), this, SLOT(unlockWallet(AskPassphraseDialog::Context)));
 
         // Show progress dialog
         connect(walletModel, SIGNAL(showProgress(QString, int)), this, SLOT(showProgress(QString, int)));
@@ -350,7 +351,8 @@ void WalletView::encryptWallet(bool status)
 {
     if (!walletModel)
         return;
-    AskPassphraseDialog dlg(status ? AskPassphraseDialog::Encrypt : AskPassphraseDialog::Decrypt, this, walletModel);
+    AskPassphraseDialog dlg(status ? AskPassphraseDialog::Mode::Encrypt : AskPassphraseDialog::Mode::Decrypt, this, 
+                            walletModel, AskPassphraseDialog::Context::Encrypt);
     dlg.exec();
 
     updateEncryptionStatus();
@@ -364,30 +366,23 @@ void WalletView::backupWallet()
 
     if (filename.isEmpty())
         return;
-
-    if (!walletModel->backupWallet(filename)) {
-        emit message(tr("Backup Failed"), tr("There was an error trying to save the wallet data to %1.").arg(filename),
-            CClientUIInterface::MSG_ERROR);
-    } else {
-        emit message(tr("Backup Successful"), tr("The wallet data was successfully saved to %1.").arg(filename),
-            CClientUIInterface::MSG_INFORMATION);
-    }
+    walletModel->backupWallet(filename);
 }
 
 void WalletView::changePassphrase()
 {
-    AskPassphraseDialog dlg(AskPassphraseDialog::ChangePass, this, walletModel);
+    AskPassphraseDialog dlg(AskPassphraseDialog::Mode::ChangePass, this, walletModel, AskPassphraseDialog::Context::ChangePass);
     dlg.exec();
 }
 
-void WalletView::unlockWallet()
+void WalletView::unlockWallet(AskPassphraseDialog::Context context)
 {
     if (!walletModel)
         return;
     // Unlock wallet when requested by wallet model
 
     if (walletModel->getEncryptionStatus() == WalletModel::Locked || walletModel->getEncryptionStatus() == WalletModel::UnlockedForAnonymizationOnly) {
-        AskPassphraseDialog dlg(AskPassphraseDialog::UnlockAnonymize, this, walletModel);
+        AskPassphraseDialog dlg(AskPassphraseDialog::Mode::UnlockAnonymize, this, walletModel, context);
         dlg.exec();
     }
 }
@@ -409,12 +404,76 @@ void WalletView::toggleLockWallet()
 
     // Unlock the wallet when requested
     if (encStatus == walletModel->Locked) {
-        AskPassphraseDialog dlg(AskPassphraseDialog::UnlockAnonymize, this, walletModel);
+        AskPassphraseDialog dlg(AskPassphraseDialog::Mode::UnlockAnonymize, this, walletModel, AskPassphraseDialog::Context::ToggleLock);
         dlg.exec();
     }
 
     else if (encStatus == walletModel->Unlocked || encStatus == walletModel->UnlockedForAnonymizationOnly) {
             walletModel->setWalletLocked(true);
+    }
+}
+
+// Helper to import a private key instead of making the user go to the debug console
+void WalletView::importPrivateKey()
+{
+    bool ok;
+    QString privKey = QInputDialog::getText(0, tr(PACKAGE_NAME), tr("Enter a Zenon private key to import into your wallet."), QLineEdit::Normal, "", &ok);
+    if (ok && !privKey.isEmpty()) {
+
+        LOCK2(cs_main, pwalletMain->cs_wallet);
+
+        WalletModel::UnlockContext ctx(walletModel->requestUnlock(AskPassphraseDialog::Context::Unlock_Full));
+        if (!ctx.isValid())  // Unlock wallet was cancelled
+            return;
+
+        CBitcoinSecret vchSecret;
+        if (!vchSecret.SetString(privKey.toStdString())) {
+            QMessageBox::critical(0, tr(PACKAGE_NAME), tr("This doesn't appear to be a Zenon private key."));
+            return;
+        }
+
+        CKey key = vchSecret.GetKey();
+        if (!key.IsValid()) {
+            QMessageBox::critical(0, tr(PACKAGE_NAME), tr("Private key outside allowed range."));
+            return;
+        }
+
+        CPubKey pubkey = key.GetPubKey();
+        assert(key.VerifyPubKey(pubkey));
+        CKeyID vchAddress = pubkey.GetID();
+        {
+            pwalletMain->MarkDirty();
+            pwalletMain->SetAddressBook(vchAddress, "", "receive");
+
+            if (pwalletMain->HaveKey(vchAddress)) {
+                QMessageBox::critical(0, tr(PACKAGE_NAME), tr("This key has already been added."));
+                return;
+            }
+
+            pwalletMain->mapKeyMetadata[vchAddress].nCreateTime = 1;
+
+            if (!pwalletMain->AddKeyPubKey(key, pubkey)) {
+                QMessageBox::critical(0, tr(PACKAGE_NAME), tr("Error adding key to wallet."));
+                return;
+            }
+
+            // whenever a key is imported, we need to scan the whole chain
+            pwalletMain->nTimeFirstKey = 1; // 0 would be considered 'no value'
+
+            QMessageBox msgBox;
+            msgBox.setText(tr("Key successfully added to wallet."));
+            msgBox.setInformativeText("Rescan now? (Select No if you have more keys to import)");
+            msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+            msgBox.setDefaultButton(QMessageBox::No);
+
+            if (msgBox.exec() == QMessageBox::Yes)
+            {
+                // rescan to find txs associated with imported address
+                pwalletMain->ScanForWalletTransactions(chainActive.Genesis(), true);
+                QMessageBox::information(0, tr(PACKAGE_NAME), tr("Rescan complete."));
+            }
+        }
+        return;
     }
 }
 

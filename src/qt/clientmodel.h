@@ -9,8 +9,10 @@
 #define BITCOIN_QT_CLIENTMODEL_H
 
 #include <QObject>
+#include <QDateTime>
 
 class AddressTableModel;
+class BanTableModel;
 class OptionsModel;
 class PeerTableModel;
 class TransactionTableModel;
@@ -47,6 +49,7 @@ public:
 
     OptionsModel* getOptionsModel();
     PeerTableModel* getPeerTableModel();
+    BanTableModel *getBanTableModel();
 
     //! Return number of connections, default is in- and outbound (total)
     int getNumConnections(unsigned int flags = CONNECTIONS_ALL) const;
@@ -73,9 +76,12 @@ public:
     QString clientName() const;
     QString formatClientStartupTime() const;
 
+    bool getTorInfo(std::string& ip_port) const;
+
 private:
     OptionsModel* optionsModel;
     PeerTableModel* peerTableModel;
+    BanTableModel *banTableModel;
 
     int cachedNumBlocks;
     QString cachedMasternodeCountString;
@@ -103,11 +109,20 @@ signals:
     // Show progress dialog e.g. for verifychain
     void showProgress(const QString& title, int nProgress);
 
+    //! Fired when a new software update is available for downloading
+    void newVersionAvailable();
+
+    //! Fired when new software update is downloading from the server
+    void refreshDownloadProgress(const QString& title, int progress);
+
 public slots:
     void updateTimer();
     void updateMnTimer();
     void updateNumConnections(int numConnections);
     void updateAlert(const QString& hash, int status);
+    void updateBanlist();
+    void updateNewVersionAvailable();
+    void updateDownloadProgress(const QString& title, int progress);
 };
 
 #endif // BITCOIN_QT_CLIENTMODEL_H

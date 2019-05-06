@@ -10,6 +10,7 @@
  * @license    This project is released under the MIT license.
  **/
 // Copyright (c) 2017 The PIVX developers
+// Copyright (c) 2018-2019 The Zenon developers
 
 #ifndef COMMITMENT_H_
 #define COMMITMENT_H_
@@ -38,6 +39,7 @@ public:
 	 * @param value the value to commit to
 	 */
 	Commitment(const IntegerGroupParams* p, const CBigNum& value);
+    explicit Commitment(const IntegerGroupParams* p, const CBigNum& bnSerial, const CBigNum& bnRandomness);
 	const CBigNum& getCommitmentValue() const;
 	const CBigNum& getRandomness() const;
 	const CBigNum& getContents() const;

@@ -1,15 +1,14 @@
 // Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2015-2017 The PIVX developers
+// Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-// clang-format off
-#include "net.h"
+#include "netbase.h"
 #include "masternodeconfig.h"
 #include "util.h"
 #include "ui_interface.h"
 #include <base58.h>
-// clang-format on
 
 CMasternodeConfig masternodeConfig;
 
@@ -28,9 +27,9 @@ bool CMasternodeConfig::read(std::string& strErr)
     if (!streamConfig.good()) {
         FILE* configFile = fopen(pathMasternodeConfigFile.string().c_str(), "a");
         if (configFile != NULL) {
-            std::string strHeader = "# Masternode config file\n"
+            std::string strHeader = "# Node config file\n"
                                     "# Format: alias IP:port masternodeprivkey collateral_output_txid collateral_output_index\n"
-                                    "# Example: mn1 127.0.0.2:35993 93HaYBVUCYjEMeeH1Y4sBGLALQZE1Yc1K64xiqgX37tGBDQL8Xg 2bcd3c84c84f87eaa86e4e56834c92927a07f9e18718810b92e0d0324456a67c 0\n";
+                                    "# Example: node1 127.0.0.2:35993 7oBFTy45Mi6CyiPV9vz3h4YK97adH9PDioSYKCsk5jDCLc6tbuX 2bcd3c84c84f87eaa86e4e56834c92927a07f9e18718810b92e0d0324456a67c 0\n";
             fwrite(strHeader.c_str(), std::strlen(strHeader.c_str()), 1, configFile);
             fclose(configFile);
         }
@@ -60,15 +59,25 @@ bool CMasternodeConfig::read(std::string& strErr)
             }
         }
 
+        int port = 0;
+        std::string hostname = "";
+        SplitHostPort(ip, port, hostname);
+        if(port == 0 || hostname == "") {
+            strErr = _("Failed to parse host:port string") + "\n"+
+                     strprintf(_("Line: %d"), linenumber) + "\n\"" + line + "\"";
+            streamConfig.close();
+            return false;
+        }
+
         if (Params().NetworkID() == CBaseChainParams::MAIN) {
-            if (CService(ip).GetPort() != 35993) {
+            if (port != 35993) {
                 strErr = _("Invalid port detected in masternode.conf") + "\n" +
                          strprintf(_("Line: %d"), linenumber) + "\n\"" + line + "\"" + "\n" +
                          _("(must be 35993 for mainnet)");
                 streamConfig.close();
                 return false;
             }
-        } else if (CService(ip).GetPort() == 35993) {
+        } else if (port == 35993) {
             strErr = _("Invalid port detected in masternode.conf") + "\n" +
                      strprintf(_("Line: %d"), linenumber) + "\n\"" + line + "\"" + "\n" +
                      _("(35993 could be used only on mainnet)");
@@ -94,4 +103,44 @@ bool CMasternodeConfig::CMasternodeEntry::castOutputIndex(int &n)
     }
 
     return true;
+}
+
+void CMasternodeConfig::clear()
+{
+	entries.clear();
+}
+
+void CMasternodeConfig::deleteAlias(int count)
+{
+	count = count - 1;
+	entries.erase(entries.begin()+count);
+}
+
+void CMasternodeConfig::writeToMasternodeConf()
+{
+    boost::filesystem::path pathMasternodeConfigFile = GetMasternodeConfigFile();
+    boost::filesystem::ifstream streamConfig(pathMasternodeConfigFile);
+
+    FILE* configFile = fopen(pathMasternodeConfigFile.string().c_str(), "w");
+
+	// Add file header back as each time this runs it restarts the file
+    std::string strHeader = "# Node config file\n"
+    "# Format: alias IP:port masternodeprivkey collateral_output_txid collateral_output_index\n"
+    "# Example: node1 127.0.0.2:35993 7oBFTy45Mi6CyiPV9vz3h4YK97adH9PDioSYKCsk5jDCLc6tbuX 2bcd3c84c84f87eaa86e4e56834c92927a07f9e18718810b92e0d0324456a67c 0\n";
+    fwrite(strHeader.c_str(), std::strlen(strHeader.c_str()), 1, configFile);
+	
+	std::string masternodeAliasBase = "";
+	
+	for (CMasternodeConfig::CMasternodeEntry mne : masternodeConfig.getEntries()) {
+		// Orders configs in proper strings
+		std::string masternodeAliasLine  = mne.getAlias() + " " + mne.getIp() + " " + mne.getPrivKey() + " " + mne.getTxHash() + " " + mne.getOutputIndex() + "\n";
+		masternodeAliasBase = masternodeAliasBase + masternodeAliasLine;
+	}
+	//Writes it to the string
+	fwrite(masternodeAliasBase.c_str(), std::strlen(masternodeAliasBase.c_str()), 1, configFile);
+	// When done adding all the masternodes to the config close the file	
+    fclose(configFile);
+	clear();
+	std::string strErr;
+	read(strErr);
 }

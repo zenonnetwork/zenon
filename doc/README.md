@@ -26,10 +26,8 @@ Drag Zenon-Qt to your applications folder, and then run Zenon-Qt.
 
 ### Need Help?
 
-* See the documentation at the [Zenon Wiki](https://en.bitcoin.it/wiki/Main_Page) ***TODO***
-for help and more information.
-* Ask for help on [BitcoinTalk](https://bitcointalk.org/index.php) or on the [Zenon Forum](http://Zenoncoin.com/).
-* Join one of our Discord groups [Zenon Discord Groups](https://discord.gg/YcnvMqt).
+* Ask for help on [BitcoinTalk](https://bitcointalk.org/index.php?topic=4281633.msg38564494)
+* Join our Discord server [Discord Server](https://discordapp.com/invite/XDDjECy)
 
 Building
 ---------------------
@@ -41,7 +39,7 @@ The following are developer notes on how to build Zenon on your native platform.
 
 Development
 ---------------------
-The Zenon repo's [root README](https://github.com/eastcoastcrypto/Zenon/blob/master/README.md) contains relevant information on the development process and automated testing.
+The Zenon repo's [root README](https://github.com/zenonnetwork/zenon/blob/master/README.md) contains relevant information on the development process and automated testing.
 
 - [Developer Notes](developer-notes.md)
 - [Multiwallet Qt Development](multiwallet-qt.md)
@@ -55,8 +53,7 @@ The Zenon repo's [root README](https://github.com/eastcoastcrypto/Zenon/blob/mas
 
 ### Resources
 
-* Discuss on the [BitcoinTalk](https://bitcointalk.org/index.php?topic=1262920.0) .
-* Join the [Zenon-Dev] Discord groups [Zenon Discord Groups](https://discord.gg/YcnvMqt).
+* Discuss on the [BitcoinTalk](https://bitcointalk.org/index.php?topic=)
 
 ### Miscellaneous
 - [Assets Attribution](assets-attribution.md)

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>801</width>
-    <height>564</height>
+    <height>515</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -23,10 +23,10 @@
    <item>
     <widget class="QTabWidget" name="multisigTabWidget">
      <property name="styleSheet">
-      <string notr="true"/>
+      <string notr="true">QScrollArea{border: none;}</string>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="addMultisigTab">
       <property name="sizePolicy">
@@ -43,9 +43,6 @@
         <layout class="QHBoxLayout" name="enterMLayout">
          <item>
           <widget class="QSpinBox" name="enterMSpinbox">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -55,17 +52,11 @@
            <property name="toolTip">
             <string>How many people must sign to verify a transaction</string>
            </property>
-           <property name="frame">
-            <bool>false</bool>
-           </property>
-           <property name="keyboardTracking">
-            <bool>true</bool>
-           </property>
            <property name="minimum">
             <number>1</number>
            </property>
            <property name="maximum">
-            <number>16</number>
+            <number>15</number>
            </property>
            <property name="value">
             <number>1</number>
@@ -150,15 +141,6 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
-         <property name="frameShape">
-          <enum>QFrame::NoFrame</enum>
-         </property>
-         <property name="lineWidth">
-          <number>0</number>
-         </property>
-         <property name="midLineWidth">
-          <number>-2</number>
-         </property>
          <property name="widgetResizable">
           <bool>true</bool>
          </property>
@@ -168,7 +150,7 @@
             <x>0</x>
             <y>0</y>
             <width>731</width>
-            <height>176</height>
+            <height>131</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -361,17 +343,17 @@ Please be patient after clicking import.</string>
                  </property>
                 </widget>
                </item>
-               <item row="1" column="0">
-                <widget class="QLabel" name="labelAmount">
-                 <property name="text">
-                  <string>Amount:</string>
-                 </property>
-                </widget>
-               </item>
                <item row="1" column="1">
                 <widget class="QLabel" name="labelAmount_int">
                  <property name="text">
                   <string>0</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QLabel" name="labelAmount">
+                 <property name="text">
+                  <string>Amount:</string>
                  </property>
                 </widget>
                </item>
@@ -415,8 +397,8 @@ Please be patient after clicking import.</string>
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>713</width>
-                <height>76</height>
+                <width>715</width>
+                <height>116</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_7">
@@ -431,7 +413,7 @@ Please be patient after clicking import.</string>
                  <property name="sizeHint" stdset="0">
                   <size>
                    <width>20</width>
-                   <height>40</height>
+                   <height>80</height>
                   </size>
                  </property>
                 </spacer>
@@ -492,12 +474,6 @@ Please be patient after clicking import.</string>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
-             <property name="frameShape">
-              <enum>QFrame::NoFrame</enum>
-             </property>
-             <property name="lineWidth">
-              <number>0</number>
-             </property>
              <property name="widgetResizable">
               <bool>true</bool>
              </property>
@@ -507,7 +483,7 @@ Please be patient after clicking import.</string>
                 <x>0</x>
                 <y>0</y>
                 <width>715</width>
-                <height>73</height>
+                <height>104</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_11">
@@ -595,15 +571,11 @@ Please be patient after clicking import.</string>
                  <height>16777215</height>
                 </size>
                </property>
+               <property name="sizeAdjustPolicy">
+                <enum>QAbstractScrollArea::AdjustToContents</enum>
+               </property>
                <property name="readOnly">
                 <bool>true</bool>
-               </property>
-               <property name="html">
-                <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'.SF NS Text'; font-size:13pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Noto Sans'; font-size:9pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
               </widget>
              </item>
@@ -621,13 +593,13 @@ p, li { white-space: pre-wrap; }
      <widget class="QWidget" name="signMultisigTransaction">
       <property name="styleSheet">
        <string notr="true">txScrollArea:{
-	border: 1px solid #5b4c7c;
+           border: none;
 }
 keyScrollArea:{
-	border: 1px solid #5b4c7c;
+	border: none;
 }
 txScrollArea:{
-	border: 1px solid #5b4c7c;
+	border: none;
 }</string>
       </property>
       <attribute name="title">
@@ -796,6 +768,9 @@ txScrollArea:{
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
+             <property name="sizeAdjustPolicy">
+              <enum>QAbstractScrollArea::AdjustToContents</enum>
+             </property>
              <property name="widgetResizable">
               <bool>true</bool>
              </property>
@@ -804,8 +779,8 @@ txScrollArea:{
                <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>725</width>
-                <height>76</height>
+                <width>727</width>
+                <height>141</height>
                </rect>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_9">
@@ -820,7 +795,7 @@ txScrollArea:{
                  <property name="sizeHint" stdset="0">
                   <size>
                    <width>20</width>
-                   <height>40</height>
+                   <height>20</height>
                   </size>
                  </property>
                 </spacer>
@@ -832,19 +807,6 @@ txScrollArea:{
           </layout>
          </item>
         </layout>
-       </item>
-       <item>
-        <spacer name="verticalSpacer_2">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
        </item>
       </layout>
      </widget>

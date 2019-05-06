@@ -1,0 +1,157 @@
+
+## <summary>policy for Zenon</summary>
+
+
+########################################
+## <summary>
+##	Transition to Zenon.
+## </summary>
+## <param name="domain">
+## <summary>
+##	Domain allowed to transition.
+## </summary>
+## </param>
+#
+interface(`Zenon_domtrans',`
+	gen_require(`
+		type Zenon_t, Zenon_exec_t;
+	')
+
+	corecmd_search_bin($1)
+	domtrans_pattern($1, Zenon_exec_t, Zenon_t)
+')
+
+
+########################################
+## <summary>
+##	Execute Zenon server in the Zenon domain.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`Zenon_initrc_domtrans',`
+	gen_require(`
+		type Zenon_initrc_exec_t;
+	')
+
+	init_labeled_script_domtrans($1, Zenon_initrc_exec_t)
+')
+
+
+########################################
+## <summary>
+##	Search Zenon lib directories.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`Zenon_search_lib',`
+	gen_require(`
+		type Zenon_var_lib_t;
+	')
+
+	allow $1 Zenon_var_lib_t:dir search_dir_perms;
+	files_search_var_lib($1)
+')
+
+########################################
+## <summary>
+##	Read Zenon lib files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`Zenon_read_lib_files',`
+	gen_require(`
+		type Zenon_var_lib_t;
+	')
+
+	files_search_var_lib($1)
+	read_files_pattern($1, Zenon_var_lib_t, Zenon_var_lib_t)
+')
+
+########################################
+## <summary>
+##	Manage Zenon lib files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`Zenon_manage_lib_files',`
+	gen_require(`
+		type Zenon_var_lib_t;
+	')
+
+	files_search_var_lib($1)
+	manage_files_pattern($1, Zenon_var_lib_t, Zenon_var_lib_t)
+')
+
+########################################
+## <summary>
+##	Manage Zenon lib directories.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`Zenon_manage_lib_dirs',`
+	gen_require(`
+		type Zenon_var_lib_t;
+	')
+
+	files_search_var_lib($1)
+	manage_dirs_pattern($1, Zenon_var_lib_t, Zenon_var_lib_t)
+')
+
+
+########################################
+## <summary>
+##	All of the rules required to administrate
+##	a Zenon environment
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+## <param name="role">
+##	<summary>
+##	Role allowed access.
+##	</summary>
+## </param>
+## <rolecap/>
+#
+interface(`Zenon_admin',`
+	gen_require(`
+		type Zenon_t;
+		type Zenon_initrc_exec_t;
+		type Zenon_var_lib_t;
+	')
+
+	allow $1 Zenon_t:process { ptrace signal_perms };
+	ps_process_pattern($1, Zenon_t)
+
+	Zenon_initrc_domtrans($1)
+	domain_system_change_exemption($1)
+	role_transition $2 Zenon_initrc_exec_t system_r;
+	allow $2 system_r;
+
+	files_search_var_lib($1)
+	admin_pattern($1, Zenon_var_lib_t)
+
+')
+

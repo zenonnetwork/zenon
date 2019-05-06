@@ -1,5 +1,7 @@
 // Copyright (c) 2010 Satoshi Nakamoto
-// Copyright (c) 2012 The Bitcoin developers
+// Copyright (c) 2012-2014 The Bitcoin developers
+// Copyright (c) 2017-2018 The PIVX developers
+// Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -101,6 +103,18 @@ public:
 
     /** New block has been accepted */
     boost::signals2::signal<void(const uint256& hash)> NotifyBlockTip;
+
+    /** New block has been accepted and is over a certain size */
+    boost::signals2::signal<void(int size, const uint256& hash)> NotifyBlockSize;
+
+    /** Banlist did change. */
+    boost::signals2::signal<void (void)> BannedListChanged;
+
+    /** Notify user that new version of the software is available for downloading */
+    boost::signals2::signal<void()> NotifyUpdateAvailable;
+
+    /** Show progress e.g. for downloading update */
+    boost::signals2::signal<void(const std::string& title, int nProgress)> NotifyUpdateDownloadProgress;
 };
 
 extern CClientUIInterface uiInterface;

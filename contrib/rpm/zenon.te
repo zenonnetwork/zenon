@@ -1,0 +1,81 @@
+policy_module(Zenon, 1.100.1)
+
+########################################
+#
+# Declarations
+#
+
+type Zenon_t;
+type Zenon_exec_t;
+init_daemon_domain(Zenon_t, Zenon_exec_t)
+
+permissive Zenon_t;
+
+type Zenon_initrc_exec_t;
+init_script_file(Zenon_initrc_exec_t)
+
+type Zenon_conf_t;
+files_type(Zenon_conf_t)
+
+type Zenon_var_lib_t;
+files_type(Zenon_var_lib_t)
+
+type Zenon_var_run_t;
+files_type(Zenon_var_run_t)
+
+type Zenon_port_t;
+corenet_port(Zenon_port_t)
+
+########################################
+#
+# Zenon local policy
+#
+allow Zenon_t self:process { fork };
+
+allow Zenon_t self:fifo_file rw_fifo_file_perms;
+allow Zenon_t self:unix_stream_socket create_stream_socket_perms;
+
+manage_dirs_pattern(Zenon_t, Zenon_conf_t, Zenon_conf_t)
+manage_files_pattern(Zenon_t, Zenon_conf_t, Zenon_conf_t)
+
+manage_dirs_pattern(Zenon_t, Zenon_var_lib_t, Zenon_var_lib_t)
+manage_files_pattern(Zenon_t, Zenon_var_lib_t, Zenon_var_lib_t)
+files_var_lib_filetrans(Zenon_t, Zenon_var_lib_t, { dir file })
+
+manage_dirs_pattern(Zenon_t, Zenon_var_run_t, Zenon_var_run_t)
+manage_files_pattern(Zenon_t, Zenon_var_run_t, Zenon_var_run_t)
+
+sysnet_dns_name_resolve(Zenon_t)
+corenet_all_recvfrom_unlabeled(Zenon_t)
+
+allow Zenon_t self:tcp_socket create_stream_socket_perms;
+corenet_tcp_sendrecv_generic_if(Zenon_t)
+corenet_tcp_sendrecv_generic_node(Zenon_t)
+corenet_tcp_sendrecv_all_ports(Zenon_t)
+corenet_tcp_bind_generic_node(Zenon_t)
+
+gen_require(`
+    type Zenon_port_t;
+')
+allow Zenon_t Zenon_port_t:tcp_socket name_bind;
+
+gen_require(`
+    type Zenon_port_t;
+')
+allow Zenon_t Zenon_port_t:tcp_socket name_connect;
+
+domain_use_interactive_fds(Zenon_t)
+
+files_read_etc_files(Zenon_t)
+
+miscfiles_read_localization(Zenon_t)
+
+sysnet_dns_name_resolve(Zenon_t)
+
+allow Zenon_t Zenon_exec_t:file execute_no_trans;
+allow Zenon_t self:process setsched;
+corecmd_exec_ls(Zenon_t)
+corenet_tcp_connect_http_port(Zenon_t)
+dev_read_urand(Zenon_t)
+fs_getattr_xattr_fs(Zenon_t)
+kernel_read_system_state(Zenon_t)

@@ -30,16 +30,18 @@ SplashScreen::SplashScreen(Qt::WindowFlags f, const NetworkStyle* networkStyle) 
     pixPaint.end();
     // Set window title
     setWindowTitle("PILLARS GENERATION PHASE");
+
     // Resize window and move to center of desktop, disallow resizing
     QRect r(QPoint(), pixmap.size());
     resize(r.size());
     setFixedSize(r.size());
     move(QApplication::desktop()->screenGeometry().center() - r.center());
+
     subscribeToCoreSignals();
 }
 
 SplashScreen::~SplashScreen()
-    {
+{
     unsubscribeFromCoreSignals();
 }
 

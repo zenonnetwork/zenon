@@ -300,7 +300,7 @@ DISTRIBUTE_GROUP_DOC   = NO
 # the same type (for instance a group of public functions) to be put as a
 # subgroup of that type (e.g. under the Public Functions section). Set it to
 # NO to prevent subgrouping. Alternatively, this can be done per class using
-# the \Zenonubgrouping command.
+# the \nosubgrouping command.
 
 SUBGROUPING            = YES
 

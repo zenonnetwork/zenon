@@ -1,3 +1,8 @@
+// Copyright (c) 2017-2018 The PIVX developers
+// Copyright (c) 2018-2019 The Zenon developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "blockexplorer.h"
 #include "bitcoinunits.h"
 #include "chainparams.h"
@@ -176,7 +181,7 @@ const CBlockIndex* getexplorerBlockIndex(int64_t height)
 
 std::string getexplorerBlockHash(int64_t Height)
 {
-    std::string genesisblockhash = "0x0000006ac35dba55e583f3aec78df488acd6845fd5e76faffcad3cf0da30005e";
+    std::string genesisblockhash = "0x00000c428e1dfaf5cca80be43e445d7c6f2835d837c3d35a8243e0e0570f92ee";
     CBlockIndex* pindexBest = mapBlockIndex[chainActive.Tip()->GetBlockHash()];
     if ((Height < 0) || (Height > pindexBest->nHeight)) {
         return genesisblockhash;
@@ -251,13 +256,13 @@ std::string BlockToString(CBlockIndex* pBlock)
     std::string Content;
     Content += "<h2><a class=\"nav\" href=";
     Content += itostr(pBlock->nHeight - 1);
-    Content += ">◀&nbsp;</a>";
+    Content += ">◄&nbsp;</a>";
     Content += _("Block");
     Content += " ";
     Content += itostr(pBlock->nHeight);
     Content += "<a class=\"nav\" href=";
     Content += itostr(pBlock->nHeight + 1);
-    Content += ">&nbsp;▶</a></h2>";
+    Content += ">&nbsp;►</a></h2>";
     Content += BlockContent;
     Content += "</br>";
     /*
@@ -391,15 +396,17 @@ std::string AddressToString(const CBitcoinAddress& Address)
     /*
     CScript AddressScript;
     AddressScript.SetDestination(Address.Get());
+
     CAmount Sum = 0;
     bool fAddrIndex = false;
+
     if (!fAddrIndex)
         return ""; // it will take too long to find transactions by address
     else
     {
         std::vector<CDiskTxPos> Txs;
         paddressmap->GetTxs(Txs, AddressScript.GetID());
-        BOOST_FOREACH (const CDiskTxPos& pos, Txs)
+        for (const CDiskTxPos& pos : Txs)
         {
             CTransaction tx;
             CBlock block;
@@ -424,7 +431,7 @@ std::string AddressToString(const CBitcoinAddress& Address)
     return Content;
 }
 
-BlockExplorer::BlockExplorer(QWidget* parent) : QDialog(parent),
+BlockExplorer::BlockExplorer(QWidget* parent) : QMainWindow(parent),
                                                 ui(new Ui::BlockExplorer),
                                                 m_NeverShown(true),
                                                 m_HistoryIndex(0)
@@ -453,14 +460,12 @@ void BlockExplorer::keyPressEvent(QKeyEvent* event)
         return;
 
     default:
-        return QDialog::keyPressEvent(event);
+        return QMainWindow::keyPressEvent(event);
     }
 }
 
-void BlockExplorer::showEvent(QShowEvent* event)
+void BlockExplorer::showEvent(QShowEvent*)
 {
-    QWidget::showEvent(event);
-
     if (m_NeverShown) {
         m_NeverShown = false;
 

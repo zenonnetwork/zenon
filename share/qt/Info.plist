@@ -17,22 +17,28 @@
   <string>APPL</string>
 
   <key>CFBundleGetInfoString</key>
-  <string>1.0.0, Copyright © 2009-2019 The Bitcoin Core developers, 2014-2019 The Dash Core developers, 2015-2019 The Zenon Core developers</string>
+  <string>1.1.0, Copyright © 2009-2019 The Bitcoin Core developers, 2014-2019 The Dash Core developers, 2015-2019 The Zenon Core developers</string>
 
   <key>CFBundleShortVersionString</key>
-  <string>1.0.0</string>
+  <string>1.1.0</string>
 
   <key>CFBundleVersion</key>
-  <string>1.0.0</string>
+  <string>1.1.0</string>
 
   <key>CFBundleSignature</key>
   <string>????</string>
 
   <key>CFBundleExecutable</key>
   <string>Zenon-Qt</string>
+  
+  <key>CFBundleName</key>
+  <string>Zenon-Qt</string>
+
+  <key>LSHasLocalizedDisplayName</key>
+  <true/>
 
   <key>CFBundleIdentifier</key>
-  <string>io.Zenon.Zenon-Qt</string>
+  <string>io.zenon.Zenon-Qt</string>
 
   <key>CFBundleURLTypes</key>
   <array>
@@ -40,10 +46,10 @@
       <key>CFBundleTypeRole</key>
       <string>Editor</string>
       <key>CFBundleURLName</key>
-      <string>io.Zenon.ZenonPayment</string>
+      <string>io.zenon.ZenonPayment</string>
       <key>CFBundleURLSchemes</key>
       <array>
-        <string>Zenon</string>
+        <string>zenon</string>
       </array>
     </dict>
   </array>
@@ -52,7 +58,7 @@
   <array>
     <dict>
       <key>UTTypeIdentifier</key>
-      <string>io.Zenon.paymentrequest</string>
+      <string>io.zenon.paymentrequest</string>
       <key>UTTypeDescription</key>
       <string>Zenon payment request</string>
       <key>UTTypeConformsTo</key>
@@ -62,10 +68,10 @@
       <key>UTTypeTagSpecification</key>
       <dict>
         <key>public.mime-type</key>
-        <string>application/x-Zenon-payment-request</string>
+        <string>application/x-zenon-payment-request</string>
         <key>public.filename-extension</key>
         <array>
-          <string>Zenonpaymentrequest</string>
+          <string>zenonpaymentrequest</string>
         </array>
       </dict>
     </dict>
@@ -78,7 +84,7 @@
       <string>Editor</string>
       <key>LSItemContentTypes</key>
       <array>
-        <string>io.Zenon.paymentrequest</string>
+        <string>io.zenon.paymentrequest</string>
       </array>
       <key>LSHandlerRank</key>
       <string>Owner</string>

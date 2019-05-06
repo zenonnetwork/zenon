@@ -1,7 +1,12 @@
+// Copyright (c) 2017 The PIVX developers
+// Copyright (c) 2018-2019 The Zenon developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef BLOCKEXPLORER_H
 #define BLOCKEXPLORER_H
 
-#include <QDialog>
+#include <QMainWindow>
 
 #include "base58.h"
 #include "uint256.h"
@@ -22,7 +27,7 @@ const CBlockIndex* getexplorerBlockIndex(int64_t);
 CTxOut getPrevOut(const COutPoint& out);
 void getNextIn(const COutPoint* Out, uint256* Hash, unsigned int n);
 
-class BlockExplorer : public QDialog
+class BlockExplorer : public QMainWindow
 {
     Q_OBJECT
 

@@ -1,8 +1,8 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2017 The PIVX developers
-// Copyright (c) 2018 The Zenon developers
+// Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -11,7 +11,11 @@
 #include "random.h"
 #include "util.h"
 #include "utilstrencodings.h"
+#include "streams.h"
+#include "clientversion.h"
+
 #include <assert.h>
+
 #include <boost/assign/list_of.hpp>
 
 using namespace std;
@@ -53,11 +57,12 @@ static void convertSeed6(std::vector<CAddress>& vSeedsOut, const SeedSpec6* data
 static Checkpoints::MapCheckpoints mapCheckpoints =
 boost::assign::map_list_of
 // ZenonDevs - RELEASE CHANGE - Checkpoins, timestamp of last checkpoint, total nr. of transactions
-(       0, uint256("0x00000c428e1dfaf5cca80be43e445d7c6f2835d837c3d35a8243e0e0570f92ee"));
+(       0, uint256("00000c428e1dfaf5cca80be43e445d7c6f2835d837c3d35a8243e0e0570f92ee"))
+(       21000, uint256("4619d25fd45b6efe951d34d98abb38db3e8c6c4a7c3aae0ff08713c72c4f77df"));
 static const Checkpoints::CCheckpointData data = {
     &mapCheckpoints,
     1553068993, // * UNIX timestamp of last checkpoint block
-    1,    // * total number of transactions between genesis and last checkpoint
+    41887,    // * total number of transactions between genesis and last checkpoint
     //   (the tx=... number in the SetBestChain debug.log lines)
     2000        // * estimated number of transactions per day after checkpoint
 };
@@ -78,13 +83,22 @@ static const Checkpoints::CCheckpointData dataRegtest = {
     0,
     100};
 
-libzerocoin::ZerocoinParams* CChainParams::Zerocoin_Params() const
+libzerocoin::ZerocoinParams* CChainParams::Zerocoin_Params(bool useModulusV1) const
 {
     assert(this);
-    static CBigNum bnTrustedModulus(zerocoinModulus);
-    static libzerocoin::ZerocoinParams ZCParams = libzerocoin::ZerocoinParams(bnTrustedModulus);
+    static CBigNum bnHexModulus = 0;
+    if (!bnHexModulus)
+        bnHexModulus.SetHex(zerocoinModulus);
+    static libzerocoin::ZerocoinParams ZCParamsHex = libzerocoin::ZerocoinParams(bnHexModulus);
+    static CBigNum bnDecModulus = 0;
+    if (!bnDecModulus)
+        bnDecModulus.SetDec(zerocoinModulus);
+    static libzerocoin::ZerocoinParams ZCParamsDec = libzerocoin::ZerocoinParams(bnDecModulus);
     
-    return &ZCParams;
+    if (useModulusV1)
+        return &ZCParamsHex;
+
+    return &ZCParamsDec;
 }
 
 class CMainParams : public CChainParams
@@ -122,13 +136,16 @@ public:
         nLastPOWBlock = 321;                        // PoW End
         nModifierUpdateBlock = 2147483000;          // Modify block on height (currently we do not have any)
         nZerocoinStartHeight = 2147483000;          // Zerocoin start height (currently we do not have any)
-        nAccumulatorStartHeight = 1;
         nZerocoinStartTime = 2147483000;            // GMT: Tuesday, January 19, 2038 3:03:20 AM
-        nBlockEnforceSerialRange = 1; //Enforce serial range starting this block
-        nBlockRecalculateAccumulators = ~1; //Trigger a recalculation of accumulators
-        nBlockFirstFraudulent = ~1; //First block that bad serials emerged
-        nBlockLastGoodCheckpoint = ~1; //Last valid accumulator checkpoint
-        
+        nBlockEnforceSerialRange = 2147483000;      // Enforce serial range starting this block
+        nBlockRecalculateAccumulators = 2147483000; // Trigger a recalculation of accumulators
+        nBlockFirstFraudulent = 2147483000;         // First block that bad serials emerged (currently we do not have any)
+        nBlockLastGoodCheckpoint = 2147483000;      // Last valid accumulator checkpoint (currently we do not have any)
+        nBlockZerocoinV2 = 2147483000;              // !> The block that zerocoin v2 becomes active
+
+        // Fake Serial Attack
+        nFakeSerialBlockheightEnd = 1686215;
+
         /**
          * Build the genesis block. Note that the output of the genesis coinbase cannot
          * be spent as it did not originally exist in the database.
@@ -139,7 +156,6 @@ public:
          *     CTxOut(nValue=50.00000000, scriptPubKey=0xA9037BAC7050C479B121CF)
          *   vMerkleTree: e0028e
          */
-        
         const char* pszTimestamp = "000000000000000000131247692334cffe471b83b2d7046b4416b72e3b7c5243";
         CMutableTransaction txNew;
         txNew.vin.resize(1);
@@ -154,31 +170,6 @@ public:
         genesis.nTime = 1553068993;
         genesis.nBits = 0x1e0ffff0;
         genesis.nNonce = 176725;
-        
-        /* Hashing code start
-         if (true && genesis.GetHash() != hashGenesisBlock) {
-         printf("Searching for genesis block...\n");
-         uint256 hashTarget = CBigNum().SetCompact(genesis.nBits).getuint256();
-         uint256 thash;
-         while (true) {
-         thash = genesis.GetHash();
-         if (thash <= hashTarget)
-         break;
-         if ((genesis.nNonce & 0xFFF) == 0) {
-         printf("nonce %08X: hash = %s (target = %s)\n", genesis.nNonce, thash.ToString().c_str(), hashTarget.ToString().c_str());
-         }
-         ++genesis.nNonce;
-         if (genesis.nNonce == 0) {
-         printf("NONCE WRAPPED, incrementing time\n");
-         ++genesis.nTime;
-         }
-         }
-         printf("genesis.nTime = %u \n", genesis.nTime);
-         printf("genesis.nNonce = %u \n", genesis.nNonce);
-         printf("genesis.nVersion = %u \n", genesis.nVersion);
-         printf("genesis.GetHash = %s\n", genesis.GetHash().ToString().c_str()); //first this, then comment this line out and uncomment the one under.
-         printf("genesis.hashMerkleRoot = %s \n", genesis.hashMerkleRoot.ToString().c_str()); //improvised. worked for me, to find merkle root
-         } */
         
         hashGenesisBlock = genesis.GetHash();
         assert(hashGenesisBlock == uint256("0x00000c428e1dfaf5cca80be43e445d7c6f2835d837c3d35a8243e0e0570f92ee"));
@@ -198,12 +189,11 @@ public:
         base58Prefixes[SECRET_KEY] = std::vector<unsigned char>(1, 202);
         base58Prefixes[EXT_PUBLIC_KEY] = boost::assign::list_of(0x02)(0x2D)(0x25)(0x33).convert_to_container<std::vector<unsigned char> >();
         base58Prefixes[EXT_SECRET_KEY] = boost::assign::list_of(0x02)(0x21)(0x31)(0x2B).convert_to_container<std::vector<unsigned char> >();
-        //     BIP44 coin type is from https://github.com/satoshilabs/slips/blob/master/slip-0044.md
+        // 	BIP44 coin type is from https://github.com/satoshilabs/slips/blob/master/slip-0044.md
         base58Prefixes[EXT_COIN_TYPE] = boost::assign::list_of(0x80)(0x00)(0x00)(0x77).convert_to_container<std::vector<unsigned char> >();
-        
+
         convertSeed6(vFixedSeeds, pnSeed6_main, ARRAYLEN(pnSeed6_main));
-        
-        fRequireRPCPassword = true;
+
         fMiningRequiresPeers = true;
         fAllowMinDifficultyBlocks = false;
         fDefaultConsistencyChecks = false;
@@ -212,7 +202,7 @@ public:
         fSkipProofOfWorkCheck = false;
         fTestnetToBeDeprecatedFieldRPC = false;
         fHeadersFirstSyncingActive = false;
-        
+
         nPoolMaxTransactions = 3;
         strSporkKey = "047ae1782b031fabe583e6dedbe447bf6d3ac266adc9ec7bde97116e6acd4c2758acbe3d6c64de7f8272efea16d92032c37978961ecf24887385a32f2123608efb";
         strObfuscationPoolDummyAddress = "ZXmCHzNQXcgiHsS5fukBf95jxyPzqQP2it";
@@ -225,15 +215,18 @@ public:
         "7259085141865462043576798423387184774447920739934236584823824281198163815010674810451660377306056201619676256133"
         "8441436038339044149526344321901146575444541784240209246165157233507787077498171257724679629263863563732899121548"
         "31438167899885040445364023527381951378636564391212010397122822120720357";
+
         nMaxZerocoinSpendsPerTransaction = 7; // Assume about 20kb each
         nMinZerocoinMintFee = 1 * ZCENT; //high fee required for zerocoin mints
         nMintRequiredConfirmations = 20; //the maximum amount of confirmations until accumulated in 19
         nRequiredAccumulation = 1;
         nDefaultSecurityLevel = 100; //full security level for accumulators
         nZerocoinHeaderVersion = 4; //Block headers must be this version once zerocoin is active
+        nZerocoinRequiredStakeDepth = 200; //The required confirmations for a zznn to be stakable
+
         nBudget_Fee_Confirmations = 6; // Number of confirmations for the finalization fee
     }
-    
+
     const Checkpoints::CCheckpointData& Checkpoints() const
     {
         return data;
@@ -267,6 +260,7 @@ public:
         nMaturity = 15;
         nMasternodeCountDrift = 4;
         nModifierUpdateBlock = 51197;
+
         nMaxMoneyOut = 43199500 * COIN;
         nZerocoinStartHeight = 201576;
         nZerocoinStartTime = 1524711188;
@@ -290,27 +284,38 @@ public:
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 139); // Testnet Zenon addresses start with 'x' or 'y'
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1, 19);  // Testnet Zenon script addresses start with '8' or '9'
         base58Prefixes[SECRET_KEY] = std::vector<unsigned char>(1, 239);     // Testnet private keys start with '9' or 'c' (Bitcoin defaults)
-        // Testnet Zenon BIP32 pubkeys start with 'DRKV'
         base58Prefixes[EXT_PUBLIC_KEY] = boost::assign::list_of(0x3a)(0x80)(0x61)(0xa0).convert_to_container<std::vector<unsigned char> >();
-        // Testnet Zenon BIP32 prvkeys start with 'DRKP'
         base58Prefixes[EXT_SECRET_KEY] = boost::assign::list_of(0x3a)(0x80)(0x58)(0x37).convert_to_container<std::vector<unsigned char> >();
-        // Testnet Zenon BIP44 coin type is '1' (All coin's testnet default)
         base58Prefixes[EXT_COIN_TYPE] = boost::assign::list_of(0x80)(0x00)(0x00)(0x01).convert_to_container<std::vector<unsigned char> >();
-        
-        convertSeed6(vFixedSeeds, pnSeed6_test, ARRAYLEN(pnSeed6_test));
-        
-        fRequireRPCPassword = true;
+
+        convertSeed6(vFixedSeeds, pnSeed6_main, ARRAYLEN(pnSeed6_main));
+
         fMiningRequiresPeers = true;
         fAllowMinDifficultyBlocks = true;
         fDefaultConsistencyChecks = false;
         fRequireStandard = false;
         fMineBlocksOnDemand = false;
         fTestnetToBeDeprecatedFieldRPC = true;
-        
+
         nPoolMaxTransactions = 2;
         strSporkKey = "";
         strObfuscationPoolDummyAddress = "y57cqfGRkekRyDRNeJiLtYVEbvhXrNbmox";
         nStartMasternodePayments = 1553068993;
+
+        /** Zerocoin */
+        zerocoinModulus = "25195908475657893494027183240048398571429282126204032027777137836043662020707595556264018525880784"
+            "4069182906412495150821892985591491761845028084891200728449926873928072877767359714183472702618963750149718246911"
+            "6507761337985909570009733045974880842840179742910064245869181719511874612151517265463228221686998754918242243363"
+            "7259085141865462043576798423387184774447920739934236584823824281198163815010674810451660377306056201619676256133"
+            "8441436038339044149526344321901146575444541784240209246165157233507787077498171257724679629263863563732899121548"
+            "31438167899885040445364023527381951378636564391212010397122822120720357";
+
+        nMaxZerocoinSpendsPerTransaction = 7; // Assume about 20kb each
+        nMinZerocoinMintFee = 1 * CENT; //high fee required for zerocoin mints
+        nMintRequiredConfirmations = 20; //the maximum amount of confirmations until accumulated in 19
+        nRequiredAccumulation = 1;
+        nDefaultSecurityLevel = 100; //full security level for accumulators
+        nZerocoinHeaderVersion = 4; //Block headers must be this version once zerocoin is active
         nBudget_Fee_Confirmations = 3; // Number of confirmations for the finalization fee. We have to make this very short
         // here because we only have a 8 block finalization window on testnet
     }
@@ -330,7 +335,6 @@ public:
     CRegTestParams()
     {
         networkID = CBaseChainParams::REGTEST;
-        strNetworkID = "regtest";
         strNetworkID = "regtest";
         pchMessageStart[0] = 0x69;
         pchMessageStart[1] = 0xcf;
@@ -354,13 +358,13 @@ public:
         
         vFixedSeeds.clear(); //! Testnet mode doesn't have any fixed seeds.
         vSeeds.clear();      //! Testnet mode doesn't have any DNS seeds.
-        
-        fRequireRPCPassword = false;
+
         fMiningRequiresPeers = false;
         fAllowMinDifficultyBlocks = true;
         fDefaultConsistencyChecks = true;
         fRequireStandard = false;
         fMineBlocksOnDemand = true;
+        fSkipProofOfWorkCheck = true;
         fTestnetToBeDeprecatedFieldRPC = false;
     }
     const Checkpoints::CCheckpointData& Checkpoints() const
@@ -381,22 +385,22 @@ public:
         networkID = CBaseChainParams::UNITTEST;
         strNetworkID = "unittest";
 //        nDefaultPort = 51478;
+
         vFixedSeeds.clear(); //! Unit test mode doesn't have any fixed seeds.
         vSeeds.clear();      //! Unit test mode doesn't have any DNS seeds.
-        
-        fRequireRPCPassword = false;
+
         fMiningRequiresPeers = false;
         fDefaultConsistencyChecks = true;
         fAllowMinDifficultyBlocks = false;
         fMineBlocksOnDemand = true;
     }
-    
+
     const Checkpoints::CCheckpointData& Checkpoints() const
     {
         // UnitTest share the same checkpoints as MAIN
         return data;
     }
-    
+
     //! Published setters to allow changing values in unit test cases
     virtual void setSubsidyHalvingInterval(int anSubsidyHalvingInterval) { nSubsidyHalvingInterval = anSubsidyHalvingInterval; }
     virtual void setEnforceBlockUpgradeMajority(int anEnforceBlockUpgradeMajority) { nEnforceBlockUpgradeMajority = anEnforceBlockUpgradeMajority; }
@@ -406,8 +410,22 @@ public:
     virtual void setAllowMinDifficultyBlocks(bool afAllowMinDifficultyBlocks) { fAllowMinDifficultyBlocks = afAllowMinDifficultyBlocks; }
     virtual void setSkipProofOfWorkCheck(bool afSkipProofOfWorkCheck) { fSkipProofOfWorkCheck = afSkipProofOfWorkCheck; }
 };
+static CUnitTestParams unitTestParams;
 
-static CChainParams* pCurrentParams = 0;
+
+static CChainParams* pCurrentParams = nullptr;
+
+CModifiableParams* ModifiableParams()
+{
+    assert(pCurrentParams);
+    assert(pCurrentParams == &unitTestParams);
+    return (CModifiableParams*)&unitTestParams;
+}
+
+bool ParamsSelected()
+{
+    return pCurrentParams != nullptr;
+}
 
 const CChainParams& Params()
 {
@@ -418,15 +436,17 @@ const CChainParams& Params()
 CChainParams& Params(CBaseChainParams::Network network)
 {
     switch (network) {
-        case CBaseChainParams::MAIN:
-            return mainParams;
-        case CBaseChainParams::TESTNET:
-            return testNetParams;
-        case CBaseChainParams::REGTEST:
-            return regTestParams;
-        default:
-            assert(false && "Unimplemented network");
-            return mainParams;
+    case CBaseChainParams::MAIN:
+        return mainParams;
+    case CBaseChainParams::TESTNET:
+        return testNetParams;
+    case CBaseChainParams::REGTEST:
+        return regTestParams;
+    case CBaseChainParams::UNITTEST:
+        return unitTestParams;
+    default:
+        assert(false && "Unimplemented network");
+        return mainParams;
     }
 }
 
@@ -441,7 +461,59 @@ bool SelectParamsFromCommandLine()
     CBaseChainParams::Network network = NetworkIdFromCommandLine();
     if (network == CBaseChainParams::MAX_NETWORK_TYPES)
         return false;
-    
+
     SelectParams(network);
     return true;
+}
+
+uint64_t GetBlockChainSize()
+{
+    const uint64_t GB_BYTES = 1000000000LL;
+    return 1LL * GB_BYTES;
+}
+
+bool VerifyGenesisBlock(const std::string& datadir, const uint256& genesisHash, std::string& err)
+{
+    const string path = strprintf("%s/blocks/blk00000.dat", datadir);
+    FILE *fptr = fopen(path.c_str(), "rb");
+    if (!fptr) {
+        err = strprintf("Failed to open file: %s", path);
+        return false;
+    }
+
+    CAutoFile filein(fptr, SER_DISK, CLIENT_VERSION);
+    if (filein.IsNull()) {
+        err = strprintf("Open block file failed: %s", path);
+        return false;
+    }
+
+    char buf[MESSAGE_START_SIZE] = {0};
+    filein.read(buf, MESSAGE_START_SIZE);
+    if (memcmp(buf, Params().MessageStart(), MESSAGE_START_SIZE)) {
+        err = strprintf("Invalid magic numer %s in the file: %s", HexStr(buf, buf + MESSAGE_START_SIZE), path);
+        return false;
+    }
+
+    unsigned int nSize = 0;
+    filein >> nSize;
+    if (nSize < 80 || nSize > 2000000) {
+        err = strprintf("Invalid block size %u in the file: %s", nSize, path);
+        return false;
+    }
+
+    CBlock block;
+    try {
+        // Read block
+        filein >> block;
+    } catch (std::exception& e) {
+        err = strprintf("Deserialize or I/O error: %s", e.what());
+        return false;
+    }
+
+    // Check block hash
+    if (block.GetHash() != genesisHash) {
+        err = strprintf("Block hash %s does not match genesis block hash %s", block.GetHash().ToString(), genesisHash.ToString());
+        return false;
+    } else
+        return true;
 }

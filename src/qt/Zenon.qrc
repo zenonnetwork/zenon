@@ -56,12 +56,12 @@
         <file alias="browse">res/icons/browse.svg</file>
         <file alias="staking_active">res/icons/staking_active.svg</file>
         <file alias="staking_inactive">res/icons/staking_inactive.svg</file>
+        <file alias="onion">res/icons/onion.png</file>
     </qresource>
     <qresource prefix="/css">
         <file alias="default">res/css/default.css</file>
         <file alias="welcome">res/css/welcome.css</file>
     </qresource>
-    <qresource prefix="/html"/>
     <qresource prefix="/images">
         <file alias="about">res/images/about.svg</file>
         <file alias="arrows">res/images/arrows.svg</file>
@@ -88,7 +88,7 @@
         <file alias="welcomeBackground">res/images/welcome_background.svg</file>
         <file alias="znn">res/images/znn.svg</file>
         <file alias="Zenon_logo_horizontal">res/images/Zenon_logo_horizontal.svg</file>
-	<file alias="splash">res/images/splash.png</file>
+        <file alias="splash">res/images/splash.png</file>
         <file alias="splash_testnet">res/images/splash_testnet.png</file>
         <file alias="splash_regtest">res/images/splash_regtest.png</file>
     </qresource>
@@ -128,7 +128,5 @@
         <file alias="spinner-032">res/movies/spinner-032.svg</file>
         <file alias="spinner-033">res/movies/spinner-033.svg</file>
         <file alias="spinner-034">res/movies/spinner-034.svg</file>
-        <file alias="spinner-035">res/movies/spinner-035.svg</file>
-        <file alias="loadingBar">res/movies/loading-bar.gif</file>
     </qresource>
 </RCC>

@@ -1,5 +1,6 @@
 // Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2015-2017 The PIVX developers
+// Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -117,10 +118,10 @@ public:
             return false;
         }
 
-        BOOST_FOREACH (const CTxIn& in, vinIn)
+        for (const CTxIn& in : vinIn)
             sev.push_back(in);
 
-        BOOST_FOREACH (const CTxOut& out, voutIn)
+        for (const CTxOut& out : voutIn)
             vout.push_back(out);
 
         amount = amountIn;
@@ -133,7 +134,7 @@ public:
 
     bool AddSig(const CTxIn& vin)
     {
-        BOOST_FOREACH (CTxDSIn& s, sev) {
+        for (CTxDSIn& s : sev) {
             if (s.prevout == vin.prevout && s.nSequence == vin.nSequence) {
                 if (s.fHasSig) {
                     return false;

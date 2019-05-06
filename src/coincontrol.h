@@ -1,6 +1,7 @@
 // Copyright (c) 2011-2013 The Bitcoin developers
 // Copyright (c) 2014-2016 The Dash developers
 // Copyright (c) 2015-2017 The PIVX developers
+// Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -16,7 +17,7 @@ class CCoinControl
 public:
     CTxDestination destChange;
     bool useObfuScation;
-    bool useRhenFAST;
+    bool useSwiftTX;
     bool fSplitBlock;
     int nSplitBlock;
     //! If false, allows unselected inputs, but requires all selected inputs be used
@@ -35,7 +36,7 @@ public:
     {
         destChange = CNoDestination();
         setSelected.clear();
-        useRhenFAST = false;
+        useSwiftTX = false;
         useObfuScation = false;
         fAllowOtherInputs = false;
         fAllowWatchOnly = true;

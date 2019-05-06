@@ -1,7 +1,8 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2017 The PIVX developers
+// Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -28,19 +29,21 @@
 
 #include <boost/filesystem/path.hpp>
 #include <boost/thread/exceptions.hpp>
+#include <boost/thread/condition_variable.hpp> // for boost::thread_interrupted
 
 //Zenon only features
 
 extern bool fMasterNode;
 extern bool fLiteMode;
-extern bool fEnableRhenFAST;
-extern int nRhenFASTDepth;
+extern bool fEnableSwiftTX;
+extern int nSwiftTXDepth;
 extern int nZeromintPercentage;
 extern const int64_t AUTOMINT_DELAY;
 extern int nPreferredDenom;
 extern int nAnonymizeZenonAmount;
 extern int nLiquidityProvider;
 extern bool fEnableZeromint;
+extern bool fEnableAutoConvert;
 extern int64_t enforceMasternodePaymentsTime;
 extern std::string strMasterNodeAddr;
 extern int keysLoaded;
@@ -60,6 +63,7 @@ extern bool fLogIPs;
 extern volatile bool fReopenDebugLog;
 
 void SetupEnvironment();
+bool SetupNetworking();
 
 /** Return true if log accepts specified category */
 bool LogAcceptCategory(const char* category);
@@ -67,6 +71,7 @@ bool LogAcceptCategory(const char* category);
 int LogPrintStr(const std::string& str);
 
 #define LogPrintf(...) LogPrint(NULL, __VA_ARGS__)
+#define DebugPrintf(...) if (fDebug) LogPrint(NULL, __VA_ARGS__)
 
 /**
  * When we switch to C++11, this can be switched to variadic templates instead
@@ -105,6 +110,8 @@ static inline bool error(const char* format)
     return false;
 }
 
+double double_safe_addition(double fValue, double fIncrement);
+double double_safe_multiplication(double fValue, double fmultiplicator);
 void PrintExceptionContinue(std::exception* pex, const char* pszThread);
 void ParseParameters(int argc, const char* const argv[]);
 void FileCommit(FILE* fileout);
@@ -128,6 +135,7 @@ boost::filesystem::path GetSpecialFolderPath(int nFolder, bool fCreate = true);
 boost::filesystem::path GetTempPath();
 void ShrinkDebugFile();
 void runCommand(std::string strCommand);
+bool FindUpdateUrlForThisPlatform(const std::string& info, std::string& url, std::string& error);
 
 inline bool IsSwitchChar(char c)
 {
@@ -137,6 +145,23 @@ inline bool IsSwitchChar(char c)
     return c == '-';
 #endif
 }
+
+/**
+ * Convert size to the human readable string
+ *
+ * @param size number of bytes
+ * @param si true: 1k = 1000, false: 1k = 1024
+ * @return human readable string
+ */
+std::string HumanReadableSize(int64_t size, bool si);
+
+/**
+ * Test if given argument is defined
+ *
+ * @param strArg Argument to get (e.g. "-foo")
+ * @return true - defined, false - not defined
+ */
+bool DefinedArg(const std::string& strArg);
 
 /**
  * Return string argument or default value
@@ -203,6 +228,7 @@ std::string HelpMessageOpt(const std::string& option, const std::string& message
 void SetThreadPriority(int nPriority);
 void RenameThread(const char* name);
 
+// ZC: LoopForever used only in net.cpp, I guess it could be replaced w/ scheduler.scheduleEvery (isn't used any more in Zenon)
 /**
  * Standard wrapper for do-something-forever thread functions.
  * "Forever" really means until the thread is interrupted.
@@ -219,12 +245,14 @@ void LoopForever(const char* name, Callable func, int64_t msecs)
     RenameThread(s.c_str());
     LogPrintf("%s thread start\n", name);
     try {
-        while (1) {
+        bool run = true;
+        while (run) {
+            run = func();
             MilliSleep(msecs);
-            func();
         }
+        LogPrintf("%s thread exit\n", name);
     } catch (boost::thread_interrupted) {
-        LogPrintf("%s thread stop\n", name);
+        LogPrintf("%s thread interrupt\n", name);
         throw;
     } catch (std::exception& e) {
         PrintExceptionContinue(&e, name);

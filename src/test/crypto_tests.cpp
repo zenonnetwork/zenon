@@ -190,7 +190,7 @@ BOOST_AUTO_TEST_CASE(hmac_sha256_testvectors) {
                    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                    "aaaaaa",
                    "54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a"
-                   "51104b6579202d2048617368204b6579204669727374",
+                   "65204b6579202d2048617368204b6579204669727374",
                    "60e431591ee0b67f0d8a26aacbf5b77f8e0bc6213728c5140546040f0ee37f54");
     TestHMACSHA256("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -198,10 +198,10 @@ BOOST_AUTO_TEST_CASE(hmac_sha256_testvectors) {
                    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                    "aaaaaa",
                    "5468697320697320612074657374207573696e672061206c6172676572207468"
-                   "616e20626c6f636b2d73697a51106b657920616e642061206c61726765722074"
-                   "68616e20626c6f636b2d73697a5110646174612e20546851106b6579206e6565"
-                   "647320746f20625110686173686564206265666f5110726265696e6720757365"
-                   "642062792074685110484d414320616c676f726974686d2e",
+                   "616e20626c6f636b2d73697a65206b657920616e642061206c61726765722074"
+                   "68616e20626c6f636b2d73697a6520646174612e20546865206b6579206e6565"
+                   "647320746f20626520686173686564206265666f7265206265696e6720757365"
+                   "642062792074686520484d414320616c676f726974686d2e",
                    "9b09ffa71b942fcb27635fbcd5b0e944bfdc63644f0713938a7f51535c3a35e2");
 }
 
@@ -231,7 +231,7 @@ BOOST_AUTO_TEST_CASE(hmac_sha512_testvectors) {
                    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                    "aaaaaa",
                    "54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a"
-                   "51104b6579202d2048617368204b6579204669727374",
+                   "65204b6579202d2048617368204b6579204669727374",
                    "80b24263c7c1a3ebb71493c1dd7be8b49b46d1f41b4aeec1121b013783f8f352"
                    "6b56d037e05f2598bd0fd2215d6a1e5295e64f73f63f0aec8b915a985d786598");
     TestHMACSHA512("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -240,10 +240,10 @@ BOOST_AUTO_TEST_CASE(hmac_sha512_testvectors) {
                    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                    "aaaaaa",
                    "5468697320697320612074657374207573696e672061206c6172676572207468"
-                   "616e20626c6f636b2d73697a51106b657920616e642061206c61726765722074"
-                   "68616e20626c6f636b2d73697a5110646174612e20546851106b6579206e6565"
-                   "647320746f20625110686173686564206265666f5110726265696e6720757365"
-                   "642062792074685110484d414320616c676f726974686d2e",
+                   "616e20626c6f636b2d73697a65206b657920616e642061206c61726765722074"
+                   "68616e20626c6f636b2d73697a6520646174612e20546865206b6579206e6565"
+                   "647320746f20626520686173686564206265666f7265206265696e6720757365"
+                   "642062792074686520484d414320616c676f726974686d2e",
                    "e37b6a775dc87dbaa4dfa9f96e5e3ffddebd71f8867289865df5a32d20cdc944"
                    "b6022cac3c4982b10d5eeb55c3e4de15134676fb6de0446065c97440fa8c6a58");
 }

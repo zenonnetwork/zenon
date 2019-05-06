@@ -1,0 +1,8 @@
+/usr/bin/Zenon-cli		--	gen_context(system_u:object_r:Zenon_exec_t,s0)
+/usr/sbin/Zenond		--	gen_context(system_u:object_r:Zenon_exec_t,s0)
+/usr/lib(64)?/Zenon/Zenond		--	gen_context(system_u:object_r:Zenon_exec_t,s0)
+
+/etc/Zenon(/.*)?		gen_context(system_u:object_r:Zenon_conf_t,s0)
+/var/lib/Zenon(/.*)?		gen_context(system_u:object_r:Zenon_var_lib_t,s0)
+
+(/var)?/run/Zenond(/.*)?   gen_context(system_u:object_r:Zenon_var_run_t,s0)

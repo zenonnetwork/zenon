@@ -1,4 +1,6 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
+// Copyright (c) 2017-2018 The PIVX developers
+// Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -10,7 +12,6 @@
 #endif
 
 #include "amount.h"
-#include "spinner.h"
 
 #include <QLabel>
 #include <QMainWindow>
@@ -34,8 +35,6 @@ class MasternodeList;
 
 class CWallet;
 
-#include <QThread>
-#include <iostream>
 QT_BEGIN_NAMESPACE
 class QAction;
 class QProgressBar;
@@ -57,7 +56,7 @@ public:
     ~BitcoinGUI();
 
     /** Set the client model.
-        The client model represents the part of the core that communicates with the P2P network, and is wallet-agZenontic.
+        The client model represents the part of the core that communicates with the P2P network, and is wallet-agnostic.
     */
     void setClientModel(ClientModel* clientModel);
 
@@ -69,7 +68,6 @@ public:
     bool addWallet(const QString& name, WalletModel* walletModel);
     bool setCurrentWallet(const QString& name);
     void removeAllWallets();
-
 #endif // ENABLE_WALLET
     bool enableWallet;
     bool fMultiSend = false;
@@ -82,17 +80,20 @@ protected:
     bool eventFilter(QObject* object, QEvent* event);
 
 private:
+
     ClientModel* clientModel;
     WalletFrame* walletFrame;
 
     UnitDisplayStatusBarControl* unitDisplayControl;
     QLabel* labelStakingIcon;
+//    QPushButton* labelAutoMintIcon;
     QPushButton* labelEncryptionIcon;
+    QLabel* labelTorIcon;
     QPushButton* labelConnectionsIcon;
     QLabel* labelBlocksIcon;
-    Spinner* labelBlocksIconSpinner;
     QLabel* progressBarLabel;
     QProgressBar* progressBar;
+    QProgressBar* progressBarDownloadUpdate = nullptr;
     QProgressDialog* progressDialog;
 
     QMenuBar* appMenuBar;
@@ -132,6 +133,7 @@ private:
     QAction* openBlockExplorerAction;
     QAction* showHelpMessageAction;
     QAction* multiSendAction;
+    QAction* importPrivateKeyAction;
 
     QSystemTrayIcon* trayIcon;
     QMenu* trayIconMenu;
@@ -185,9 +187,10 @@ public slots:
     */
     void message(const QString& title, const QString& message, unsigned int style, bool* ret = NULL);
 
-    void setStakingStatus();
-
 #ifdef ENABLE_WALLET
+    void setStakingStatus();
+//    void setAutoMintStatus();
+
     /** Set the encryption status as shown in the UI.
        @param[in] status            current encryption status
        @see WalletModel::EncryptionStatus
@@ -198,8 +201,11 @@ public slots:
 
     /** Show incoming transaction notification for new transactions. */
     void incomingTransaction(const QString& date, int unit, const CAmount& amount, const QString& type, const QString& address);
-
 #endif // ENABLE_WALLET
+
+private:
+    /** Set the Tor-enabled icon as shown in the UI. */
+    void updateTorIcon();
 
 private slots:
 #ifdef ENABLE_WALLET
@@ -256,6 +262,9 @@ private slots:
 
     /** Show progress dialog e.g. for verifychain */
     void showProgress(const QString& title, int nProgress);
+
+    /** Show progress bar for downloading update */
+    void refreshDownloadProgress(const QString& title, int nProgress);
 };
 
 class UnitDisplayStatusBarControl : public QLabel
@@ -277,7 +286,7 @@ private:
 
     /** Shows context menu with Display Unit options by the mouse coordinates */
     void onDisplayUnitsClicked(const QPoint& point);
-    /** Creates context menu, its actions, and Zenons up all the relevant signals for mouse events. */
+    /** Creates context menu, its actions, and wires up all the relevant signals for mouse events. */
     void createContextMenu();
 
 private slots:

@@ -75,7 +75,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Use 2 separate masternodes to mix funds up to 10000 ZNN</string>
+    <string>Use 2 separate nodes to mix funds up to 10000 ZNN</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_3">
@@ -88,7 +88,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Use 8 separate masternodes to mix funds up to 10000 ZNN</string>
+    <string>Use 8 separate nodes to mix funds up to 10000 ZNN</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_4">
@@ -101,7 +101,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Use 16 separate masternodes</string>
+    <string>Use 16 separate nodes</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_6">

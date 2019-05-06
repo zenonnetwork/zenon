@@ -299,7 +299,7 @@ int main(int argc, char** argv) {
 
   StartPhase("property");
   {
-    char* prop = leveldb_property_value(db, "Zenonuchprop");
+    char* prop = leveldb_property_value(db, "nosuchprop");
     CheckCondition(prop == NULL);
     prop = leveldb_property_value(db, "leveldb.stats");
     CheckCondition(prop != NULL);

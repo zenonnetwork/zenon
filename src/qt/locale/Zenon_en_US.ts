@@ -2003,8 +2003,8 @@ https://www.transifex.com/Zenon-project/Zenon-project-translations</translation>
         <translation><numerusform>%n Round</numerusform><numerusform>%n Rounds</numerusform></translation>
     </message>
     <message>
-        <source>Not enough compatible inputs to anonymize &lt;span style='color:red;'&gt;%1&lt;/span&gt;,&lt;br&gt;will anonymize &lt;span style='color:red;'&gt;%2&lt;/span&gt; instead</source>
-        <translation>Not enough compatible inputs to anonymize &lt;span style='color:red;'&gt;%1&lt;/span&gt;,&lt;br&gt;will anonymize &lt;span style='color:red;'&gt;%2&lt;/span&gt; instead</translation>
+        <source>Not enough compatible inputs to anonymize &lt;span style='color:#F41954;'&gt;%1&lt;/span&gt;,&lt;br&gt;will anonymize &lt;span style='color:#F41954;'&gt;%2&lt;/span&gt; instead</source>
+        <translation>Not enough compatible inputs to anonymize &lt;span style='color:#F41954;'&gt;%1&lt;/span&gt;,&lt;br&gt;will anonymize &lt;span style='color:#F41954;'&gt;%2&lt;/span&gt; instead</translation>
     </message>
     <message>
         <source>Overall progress</source>

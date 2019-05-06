@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PrivKeyPage</class>
+ <widget class="QWidget" name="PrivKeyPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>440</width>
+    <height>87</height>
+   </rect>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: #181718;</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QValidatedLineEdit" name="payTo">
+     <property name="toolTip">
+      <string>The Zenon address to send the payment to</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">font-size:12px; min-height:16px; outline:0; padding:3px; border: 1px solid #6FF34D; border-radius:6px; background-color:#181718; color:#6FF34D;</string>
+     </property>
+     <property name="inputMask">
+      <string/>
+     </property>
+     <property name="placeholderText">
+      <string>Enter a Zenon address</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="copyAddress">
+       <property name="toolTip">
+        <string>Copy the currently selected address to the system clipboard</string>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">color: #6FF34D;</string>
+       </property>
+       <property name="text">
+        <string>&amp;Copy</string>
+       </property>
+       <property name="icon">
+        <iconset resource="../Zenon.qrc">
+         <normaloff>:/icons/editcopy</normaloff>:/icons/editcopy</iconset>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="closeButton">
+       <property name="styleSheet">
+        <string notr="true">color: #6FF34D;</string>
+       </property>
+       <property name="text">
+        <string>C&amp;lose</string>
+       </property>
+       <property name="autoDefault">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QValidatedLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>qvalidatedlineedit.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="../Zenon.qrc"/>
+ </resources>
+ <connections/>
+</ui>

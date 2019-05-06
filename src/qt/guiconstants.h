@@ -1,6 +1,7 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2017 The PIVX developers
+// Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -33,7 +34,12 @@ static const bool DEFAULT_SPLASHSCREEN = true;
 #define COLOR_TX_STATUS_OFFLINE QColor(192, 192, 192)
 /* Transaction list -- TX status decoration - default color */
 #define COLOR_BLACK QColor(111, 243, 77)
-
+/* Transaction list -- TX status decoration - conflicted */
+#define COLOR_CONFLICTED QColor(244, 25, 84)
+/* Transaction list -- TX status decoration - orphan */
+#define COLOR_ORPHAN QColor(119, 119, 119)
+/* Transaction list -- TX status decoration - stake */
+#define COLOR_STAKE QColor(111, 243, 77)
 /* Tooltips longer than this (in characters) are converted into rich text,
    so that they can be word-wrapped.
  */
@@ -49,7 +55,7 @@ static const int MAX_URI_LENGTH = 255;
 #define SPINNER_FRAMES 35
 
 #define QAPP_ORG_NAME "Zenon"
-#define QAPP_ORG_DOMAIN "Zenon.org"
+#define QAPP_ORG_DOMAIN "zenon.network"
 #define QAPP_APP_NAME_DEFAULT "Zenon-Qt"
 #define QAPP_APP_NAME_TESTNET "Zenon-Qt-testnet"
 

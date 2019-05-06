@@ -196,7 +196,7 @@
     </message>
     <message>
         <source>Amount:</source>
-        <translation>IzZenon:</translation>
+        <translation>IzZnn:</translation>
     </message>
     <message>
         <source>Priority:</source>
@@ -204,7 +204,7 @@
     </message>
     <message>
         <source>Amount</source>
-        <translation>IzZenon</translation>
+        <translation>IzZnn</translation>
     </message>
     <message>
         <source>Date</source>
@@ -228,7 +228,7 @@
     </message>
     <message>
         <source>Copy amount</source>
-        <translation>Kopiraj izZenon</translation>
+        <translation>Kopiraj izZnn</translation>
     </message>
     <message>
         <source>Copy quantity</source>
@@ -327,7 +327,7 @@
     </message>
     <message>
         <source>Amount:</source>
-        <translation>IzZenon:</translation>
+        <translation>IzZnn:</translation>
     </message>
     <message>
         <source>Choose previously used address</source>
@@ -359,14 +359,14 @@
     </message>
     <message>
         <source>Copy amount</source>
-        <translation>Kopiraj izZenon</translation>
+        <translation>Kopiraj izZnn</translation>
     </message>
     </context>
 <context>
     <name>QObject</name>
     <message>
         <source>Amount</source>
-        <translation>IzZenon</translation>
+        <translation>IzZnn</translation>
     </message>
     <message>
         <source>NETWORK</source>
@@ -451,7 +451,7 @@
     </message>
     <message>
         <source>Copy amount</source>
-        <translation>Kopiraj izZenon</translation>
+        <translation>Kopiraj izZnn</translation>
     </message>
 </context>
 <context>
@@ -478,7 +478,7 @@
     </message>
     <message>
         <source>Amount</source>
-        <translation>IzZenon</translation>
+        <translation>IzZnn</translation>
     </message>
     <message>
         <source>Label</source>
@@ -505,7 +505,7 @@
     </message>
     <message>
         <source>Amount</source>
-        <translation>IzZenon</translation>
+        <translation>IzZnn</translation>
     </message>
     <message>
         <source>(no label)</source>
@@ -524,7 +524,7 @@
     </message>
     <message>
         <source>Amount:</source>
-        <translation>IzZenon:</translation>
+        <translation>IzZnn:</translation>
     </message>
     <message>
         <source>Priority:</source>
@@ -552,7 +552,7 @@
     </message>
     <message>
         <source>Copy amount</source>
-        <translation>Kopiraj izZenon</translation>
+        <translation>Kopiraj izZnn</translation>
     </message>
     <message>
         <source>%1 to %2</source>
@@ -674,7 +674,7 @@
     </message>
     <message>
         <source>Amount</source>
-        <translation>IzZenon</translation>
+        <translation>IzZnn</translation>
     </message>
     </context>
 <context>
@@ -727,7 +727,7 @@
     </message>
     <message>
         <source>Copy amount</source>
-        <translation>Kopiraj izZenon</translation>
+        <translation>Kopiraj izZnn</translation>
     </message>
     <message>
         <source>Comma separated file (*.csv)</source>

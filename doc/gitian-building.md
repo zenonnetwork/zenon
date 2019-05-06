@@ -10,8 +10,6 @@ the same, tested dependencies are used and statically built into the executable.
 
 Multiple developers build the source code by following a specific descriptor
 ("recipe"), cryptographically sign the result, and upload the resulting signature.
-These results are compared and only if they match, the build is accepted and uploaded
-to Zenon-crypto.com.
 
 More independent gitian builders are needed, which is why I wrote this
 guide. It is preferred to follow these steps yourself instead of using someone else's
@@ -281,8 +279,8 @@ Clone the git repositories for Zenon and gitian and then checkout the Zenon vers
 
 ```bash
 git clone https://github.com/devrandom/gitian-builder.git
-git clone https://github.com/eastcoastcrypto/Zenon.git
-cd Zenon
+git clone https://github.com/zenonnetwork/zenon.git
+cd zenon-master
 git checkout v${VERSION}
 cd ..
 ```
@@ -350,7 +348,7 @@ Output from `gbuild` will look something like
     remote: Total 35606 (delta 0), reused 0 (delta 0)
     Receiving objects: 100% (35606/35606), 26.52 MiB | 4.28 MiB/s, done.
     Resolving deltas: 100% (25724/25724), done.
-    From https://github.com/eastcoastcrypto/Zenon
+    From https://github.com/zenonnetwork/Zenon
     ... (new tags, new branch etc)
     --- Building for precise x86_64 ---
     Stopping target if it is up
@@ -377,7 +375,7 @@ and inputs.
 
 For example:
 ```bash
-URL=https://github.com/eastcoastcrypto/Zenon.git
+URL=https://github.com/zenonnetwork/Zenon.git
 COMMIT=b616fb8ef0d49a919b72b0388b091aaec5849b96
 ./bin/gbuild --commit Zenon=${COMMIT} --url Zenon=${URL} ../Zenon/contrib/gitian-descriptors/gitian-linux.yml
 ./bin/gbuild --commit Zenon=${COMMIT} --url Zenon=${URL} ../Zenon/contrib/gitian-descriptors/gitian-win.yml
@@ -408,6 +406,6 @@ Uploading signatures (not yet implemented)
 ---------------------
 
 In the future it will be possible to push your signatures (both the `.assert` and `.assert.sig` files) to the
-[eastcoastcrypto/gitian.sigs](https://github.com/eastcoastcrypto/gitian.sigs/) repository, or if that's not possible to create a pull
+[zenon/gitian.sigs](https://github.com/zenonnetwork/gitian.sigs/) repository, or if that's not possible to create a pull
 request.
 There will be an official announcement when this repository is online.

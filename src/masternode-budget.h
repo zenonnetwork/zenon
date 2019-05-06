@@ -1,5 +1,6 @@
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2017 The PIVX developers
+// Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -14,7 +15,6 @@
 #include "net.h"
 #include "sync.h"
 #include "util.h"
-#include <boost/lexical_cast.hpp>
 
 using namespace std;
 
@@ -38,9 +38,9 @@ enum class TrxValidationStatus {
     VoteThreshold    /** If not enough masternodes have voted on a finalized budget */
 };
 
-static const CAmount PROPOSAL_FEE_TX = (5000 * COIN);
-static const CAmount BUDGET_FEE_TX_OLD = (5000 * COIN);
-static const CAmount BUDGET_FEE_TX = (5000 * COIN);
+static const CAmount PROPOSAL_FEE_TX = (500 * COIN);
+static const CAmount BUDGET_FEE_TX_OLD = (500 * COIN);
+static const CAmount BUDGET_FEE_TX = (500 * COIN);
 static const int64_t BUDGET_VOTE_UPDATE_MIN = 60 * 60;
 static map<uint256, int> mapPayment_History;
 
@@ -368,9 +368,9 @@ public:
         return true;
     }
 
-    //check to see if we should vote on this
-    void AutoCheck();
-    //total Zenon paid out by this budget
+    // Verify and vote on finalized budget
+    void CheckAndVote();
+    //total ZNN paid out by this budget
     CAmount GetTotalPayout();
     //vote on this finalized budget as a masternode
     void SubmitVote();
@@ -499,7 +499,7 @@ public:
     bool IsEstablished()
     {
         // Proposals must be at least a day old to make it into a budget
-        if (Params().NetworkID() == CBaseChainParams::MAIN) return (nTime < GetTime() - (60 * 60));
+        if (Params().NetworkID() == CBaseChainParams::MAIN) return (nTime < GetTime() - (60 * 60 * 24));
 
         // For testing purposes - 5 minutes
         return (nTime < GetTime() - (60 * 5));
@@ -516,16 +516,16 @@ public:
     int GetBlockCurrentCycle();
     int GetBlockEndCycle();
     double GetRatio();
-    int GetYeas();
-    int GetNays();
-    int GetAbstains();
+    int GetYeas() const;
+    int GetNays() const;
+    int GetAbstains() const;
     CAmount GetAmount() { return nAmount; }
     void SetAllotted(CAmount nAllotedIn) { nAlloted = nAllotedIn; }
     CAmount GetAllotted() { return nAlloted; }
 
     void CleanAndRemove(bool fSignatureCheck);
 
-    uint256 GetHash()
+    uint256 GetHash() const
     {
         CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
         ss << strProposalName;

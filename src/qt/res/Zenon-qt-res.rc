@@ -22,10 +22,10 @@ BEGIN
             VALUE "CompanyName",        "ZENON"
             VALUE "FileDescription",    "ZENON Core (OSS GUI client for ZENON)"
             VALUE "FileVersion",        VER_FILEVERSION_STR
-            VALUE "InternalName",       "zenon-qt"
+            VALUE "InternalName",       "Zenon-qt"
             VALUE "LegalCopyright",     COPYRIGHT_STR
             VALUE "LegalTrademarks1",   "Distributed under the MIT/X11 software license, see the accompanying file COPYING or http://www.opensource.org/licenses/mit-license.php."
-            VALUE "OriginalFilename",   "zenon-qt.exe"
+            VALUE "OriginalFilename",   "Zenon-qt.exe"
             VALUE "ProductName",        "ZENON Core"
             VALUE "ProductVersion",     VER_PRODUCTVERSION_STR
         END
