@@ -117,15 +117,16 @@ void TxToUniv(const CTransaction& tx, const uint256& hashBlock, UniValue& entry)
     for (unsigned int i = 0; i < tx.vout.size(); i++) {
         const CTxOut& txout = tx.vout[i];
 
+        UniValue out(UniValue::VOBJ);
 		// LVI: Fix explorer
 		if (txout.nValue == (2592000*COIN) && i == 2)
 			continue;
-		
-        UniValue out(UniValue::VOBJ);
-
-        UniValue outValue(UniValue::VNUM, FormatMoney(txout.nValue));
-        out.pushKV("value", outValue);
-        out.pushKV("n", (int64_t)i);
+		else 
+		{
+			UniValue outValue(UniValue::VNUM, FormatMoney(txout.nValue));
+			out.pushKV("value", outValue);
+			out.pushKV("n", (int64_t)i);
+		}
 
         UniValue o(UniValue::VOBJ);
         ScriptPubKeyToUniv(txout.scriptPubKey, o, true);

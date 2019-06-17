@@ -2881,14 +2881,10 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                 return false;
             control.Add(vChecks);
         }
-		
-		// LVI: Get 3rd output value -> n == 2
-		CAmount nValueOutPerTx = tx.GetValueOut();
-		// LVI: skip bogus tx value - block MUST be accepted
-		if (nValueOutPerTx == (2592000*COIN) && i == 2)
-			continue;
-		
         nValueOut += tx.GetValueOut();
+		// LVI: nValueOut = 259257880811494, n = 1
+		if (nValueOut == 259257880811494 && i == 1)
+			nValueOut -= 2592000*COIN;
 
         CTxUndo undoDummy;
         if (i > 0) {

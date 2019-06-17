@@ -133,6 +133,7 @@ UniValue getinfo(const UniValue& params, bool fHelp)
         obj.push_back(Pair("status", "Blockchain information not yet available"));
         return obj;
     }
+    obj.push_back(Pair("moneysupply",ValueFromAmount(chainActive.Tip()->nMoneySupply)));
 
 #ifdef ENABLE_WALLET
     if (pwalletMain) {

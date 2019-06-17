@@ -223,11 +223,6 @@ bool CZnnStake::CreateTxOuts(CWallet* pwallet, vector<CTxOut>& vout, CAmount nTo
         scriptPubKey = scriptPubKeyKernel;
 
     vout.emplace_back(CTxOut(0, scriptPubKey));
-
-    // Calculate if we need to split the output
-    if (nTotal / 2 > (CAmount)(pwallet->nStakeSplitThreshold * COIN))
-        vout.emplace_back(CTxOut(0, scriptPubKey));
-
     return true;
 }
 
