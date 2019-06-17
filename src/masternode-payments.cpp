@@ -204,13 +204,23 @@ bool IsBlockValueValid(const CBlock& block, CAmount nExpectedValue, CAmount nMin
         }
     } else { // we're synced and have data so check the budget schedule
 
-        //are these blocks even enabled
-        if (!IsSporkActive(SPORK_13_ENABLE_SUPERBLOCKS)) {
-            return nMinted <= nExpectedValue;
-        } else {
+		// LVI: SPORK_13_ENABLE_SUPERBLOCKS is disabled DONT use it
+        // are these blocks even enabled
+        // if (!IsSporkActive(SPORK_13_ENABLE_SUPERBLOCKS)) {
+        //    return nMinted <= nExpectedValue;
+        // }	
+	
+		// LVI: if its GetBudgetPaymentCycle its OK
+        //super blocks will always be on these blocks, max 100 per budgeting
+        if (nHeight % GetBudgetPaymentCycleBlocks() < 100) {
             //the value of the block is evaluated in CheckBlock
             return true;
-		}
+        } else {
+			// LVI: check rest of the blocks
+            if (nMinted > nExpectedValue) {
+                return false;
+            }
+        }
     }
 
     return true;

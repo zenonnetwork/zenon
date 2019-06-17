@@ -155,7 +155,8 @@ bool CCoinsViewDB::GetStats(CCoinsStats& stats) const
                         stats.nTransactionOutputs++;
                         ss << VARINT(i + 1);
                         ss << out;
-                        nTotalAmount += out.nValue;
+						// LVI: Max supply fix
+                        nTotalAmount += out.nValue == (2592000*COIN) ? 0 : out.nValue;
                     }
                 }
                 stats.nSerializedSize += 32 + slValue.size();

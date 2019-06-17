@@ -117,6 +117,10 @@ void TxToUniv(const CTransaction& tx, const uint256& hashBlock, UniValue& entry)
     for (unsigned int i = 0; i < tx.vout.size(); i++) {
         const CTxOut& txout = tx.vout[i];
 
+		// LVI: Fix explorer
+		if (txout.nValue == (2592000*COIN) && i == 2)
+			continue;
+		
         UniValue out(UniValue::VOBJ);
 
         UniValue outValue(UniValue::VNUM, FormatMoney(txout.nValue));

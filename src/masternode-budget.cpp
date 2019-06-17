@@ -28,7 +28,8 @@ int nSubmittedFinalBudget;
 int GetBudgetPaymentCycleBlocks()
 {
     // Amount of blocks in a months period of time (using 1 minutes per) = (60*24*30)
-    if (Params().NetworkID() == CBaseChainParams::MAIN) return 43200;
+	// LVI: Must be as it was = 720
+    if (Params().NetworkID() == CBaseChainParams::MAIN) return 720;
     //for testing purposes
 
     return 144; //ten times per day
@@ -907,6 +908,7 @@ std::string CBudgetManager::GetRequiredPaymentsString(int nBlockHeight)
     return ret;
 }
 
+// LVI: We need to keep this for new clients - syncing from 0
 CAmount CBudgetManager::GetTotalBudget(int nHeight)
 {
     if (chainActive.Tip() == NULL) return 0;
@@ -915,8 +917,36 @@ CAmount CBudgetManager::GetTotalBudget(int nHeight)
         CAmount nSubsidy = 500 * COIN;
         return ((nSubsidy / 100) * 10) * 146;
     }
+
+    //get block value and calculate from that
+    CAmount nSubsidy = 0;
     
-    return 3;
+    if (nHeight == 0) {
+        nSubsidy = 70001 * COIN;
+    } else if (nHeight < 321 && nHeight > 0) {
+        nSubsidy = 10 * COIN;
+    } else if (nHeight < 63360  && nHeight > 321) {
+        nSubsidy = 10 * COIN;
+    } else if (nHeight < 106560 && nHeight > 63360 ) {
+        nSubsidy = 7 * COIN;
+    } else if (nHeight < 149760 && nHeight > 106560) {
+        nSubsidy = 6.5 * COIN;
+    } else if (nHeight < 192960 && nHeight > 149760) {
+        nSubsidy = 6 * COIN;
+    } else if (nHeight < 236160 && nHeight > 192960) {
+        nSubsidy = 5.5 * COIN;
+    } else if (nHeight < 279360 && nHeight > 236160) {
+        nSubsidy = 5* COIN;
+    } else if (nHeight < 322560 && nHeight > 279360) {
+        nSubsidy = 4 * COIN;
+    } else if (nHeight > 322560) {
+        nSubsidy = 3 * COIN;
+    } else {
+        nSubsidy = 10 * COIN;
+    }
+
+    // Amount of blocks in a months period of time (using 1 minutes per) = (60*24*30)
+    return (nSubsidy * 10) * 1440 * 30;
 }
 
 void CBudgetManager::NewBlock()
