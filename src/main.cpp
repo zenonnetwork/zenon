@@ -2885,6 +2885,9 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 		// LVI: nValueOut = 259257880811494, n = 1
 		if (nValueOut == 259257880811494 && i == 1)
 			nValueOut -= 2592000*COIN;
+		// LVI: nValueOut = 13151119035, n = 1
+		if (nValueOut == 13151119035 && i == 1)
+			nValueOut -= 130*COIN;
 
         CTxUndo undoDummy;
         if (i > 0) {
