@@ -2198,69 +2198,6 @@ UniValue reservebalance(const UniValue& params, bool fHelp)
     return result;
 }
 
-// presstab HyperStake
-UniValue setstakesplitthreshold(const UniValue& params, bool fHelp)
-{
-    if (fHelp || params.size() != 1)
-        throw runtime_error(
-            "setstakesplitthreshold value\n"
-            "\nThis will set the output size of your stakes to never be below this number\n" +
-            HelpRequiringPassphrase() + "\n"
-
-            "\nArguments:\n"
-            "1. value   (numeric, required) Threshold value between 1 and 999999\n"
-
-            "\nResult:\n"
-            "{\n"
-            "  \"threshold\": n,    (numeric) Threshold value set\n"
-            "  \"saved\": true|false    (boolean) 'true' if successfully saved to the wallet file\n"
-            "}\n"
-
-            "\nExamples:\n" +
-            HelpExampleCli("setstakesplitthreshold", "5000") + HelpExampleRpc("setstakesplitthreshold", "5000"));
-
-    EnsureWalletIsUnlocked();
-
-    uint64_t nStakeSplitThreshold = params[0].get_int();
-
-    if (nStakeSplitThreshold > 999999)
-        throw runtime_error("Value out of range, max allowed is 999999");
-
-    CWalletDB walletdb(pwalletMain->strWalletFile);
-    LOCK(pwalletMain->cs_wallet);
-    {
-        bool fFileBacked = pwalletMain->fFileBacked;
-
-        UniValue result(UniValue::VOBJ);
-        pwalletMain->nStakeSplitThreshold = nStakeSplitThreshold;
-        result.push_back(Pair("threshold", int(pwalletMain->nStakeSplitThreshold)));
-        if (fFileBacked) {
-            walletdb.WriteStakeSplitThreshold(nStakeSplitThreshold);
-            result.push_back(Pair("saved", "true"));
-        } else
-            result.push_back(Pair("saved", "false"));
-
-        return result;
-    }
-}
-
-// presstab HyperStake
-UniValue getstakesplitthreshold(const UniValue& params, bool fHelp)
-{
-    if (fHelp || params.size() != 0)
-        throw runtime_error(
-            "getstakesplitthreshold\n"
-            "Returns the threshold for stake splitting\n"
-
-            "\nResult:\n"
-            "n      (numeric) Threshold value\n"
-
-            "\nExamples:\n" +
-            HelpExampleCli("getstakesplitthreshold", "") + HelpExampleRpc("getstakesplitthreshold", ""));
-
-    return int(pwalletMain->nStakeSplitThreshold);
-}
-
 UniValue autocombinerewards(const UniValue& params, bool fHelp)
 {
     bool fEnable;

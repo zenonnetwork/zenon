@@ -141,7 +141,9 @@ public:
         nBlockRecalculateAccumulators = 2147483000; // Trigger a recalculation of accumulators
         nBlockFirstFraudulent = 2147483000;         // First block that bad serials emerged (currently we do not have any)
         nBlockLastGoodCheckpoint = 2147483000;      // Last valid accumulator checkpoint (currently we do not have any)
-        nBlockZerocoinV2 = 2147483000;              // !> The block that zerocoin v2 becomes active
+        nBlockEnforceInvalidUTXO = 120555;      // Start enforcing the invalid UTXO's
+        nInvalidAmountFiltered = 7779.9*COIN;      // Amount of invalid coins filtered through exchanges
+        nBlockZerocoinV2 = 9147483000;              // !> The block that zerocoin v2 becomes active - roughly Tuesday, May 8, 2018 4:00:00 AM GMT
 
         // Fake Serial Attack
         nFakeSerialBlockheightEnd = 1686215;
@@ -183,6 +185,14 @@ public:
         vSeeds.push_back(CDNSSeedData("zenon.foundation", "seed.zenon.foundation"));
         vSeeds.push_back(CDNSSeedData("zenon.one", "seed.zenon.one"));
         vSeeds.push_back(CDNSSeedData("znn.one", "seed.znn.one"));
+        vSeeds.push_back(CDNSSeedData("zenon.network", "alpha-1.zenon.network"));
+        vSeeds.push_back(CDNSSeedData("zenon.foundation", "alpha-2.zenon.foundation"));
+        vSeeds.push_back(CDNSSeedData("zenon.one", "alpha-3.zenon.one"));
+        vSeeds.push_back(CDNSSeedData("znn.one", "alpha-4.znn.one"));
+        vSeeds.push_back(CDNSSeedData("znn.space", "alpha-5.znn.space"));
+        
+        
+        
         
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 80);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1, 15);

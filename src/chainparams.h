@@ -123,6 +123,8 @@ public:
 
     // fake serial attack
     int Zerocoin_Block_EndFakeSerial() const { return nFakeSerialBlockheightEnd; }
+
+    CAmount InvalidAmountFiltered() const { return nInvalidAmountFiltered; };
     
 protected:
     CChainParams() {}
@@ -167,6 +169,7 @@ protected:
     std::string zerocoinModulus;
     int nMaxZerocoinSpendsPerTransaction;
     CAmount nMinZerocoinMintFee;
+    CAmount nInvalidAmountFiltered;
     int nMintRequiredConfirmations;
     int nRequiredAccumulation;
     int nDefaultSecurityLevel;

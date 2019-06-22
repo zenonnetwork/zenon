@@ -1068,11 +1068,6 @@ QDialog#OptionsDialog QCheckBox#displayAddresses {
 min-height:33px;
 }
 
-QDialog#OptionsDialog QLabel#labelStakeSplitThresholdText {
-font-size:16px;
-color:#9e9e9e;
-}
-
 /**************************** TOOLS MENU ************************************************/
 
 QDialog#RPCConsole QWidget#tab_info QLabel#label_11, QDialog#RPCConsole QWidget#tab_info QLabel#label_10 { /* Margin between Network and Block Chain headers */

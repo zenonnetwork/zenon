@@ -155,7 +155,7 @@ bool CCoinsViewDB::GetStats(CCoinsStats& stats) const
                         stats.nTransactionOutputs++;
                         ss << VARINT(i + 1);
                         ss << out;
-                        nTotalAmount += out.nValue;
+					    nTotalAmount += out.nValue;
                     }
                 }
                 stats.nSerializedSize += 32 + slValue.size();
@@ -168,7 +168,7 @@ bool CCoinsViewDB::GetStats(CCoinsStats& stats) const
     }
     stats.nHeight = mapBlockIndex.find(GetBestBlock())->second->nHeight;
     stats.hashSerialized = ss.GetHash();
-    stats.nTotalAmount = nTotalAmount;
+    stats.nTotalAmount = nTotalAmount - (2592000*COIN) - (100*COIN);
     return true;
 }
 

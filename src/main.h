@@ -263,6 +263,8 @@ int GetInputAge(CTxIn& vin);
 int GetInputAgeIX(uint256 nTXHash, CTxIn& vin);
 int GetIXConfirmations(uint256 nTXHash);
 
+bool GetCoins(const COutPoint& outpoint, CCoins& coins);
+
 struct CNodeStateStats {
     int nMisbehavior;
     int nSyncHeight;

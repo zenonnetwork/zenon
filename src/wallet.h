@@ -261,7 +261,6 @@ public:
     // Stake Settings
     unsigned int nHashDrift;
     unsigned int nHashInterval;
-    uint64_t nStakeSplitThreshold;
     int nStakeSetUpdateTime;
 
     //MultiSend
@@ -311,7 +310,6 @@ public:
 
         // Stake Settings
         nHashDrift = 45;
-        nStakeSplitThreshold = 2000;
         nHashInterval = 22;
         nStakeSetUpdateTime = 300; // 5 minutes
 

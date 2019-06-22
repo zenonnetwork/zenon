@@ -375,6 +375,7 @@ static const CRPCCommand vRPCCommands[] =
         {"Zenon", "getmasternodewinners", &getmasternodewinners, true, true, false},
         {"Zenon", "getmasternodescores", &getmasternodescores, true, true, false},
         {"Zenon", "mnsync", &mnsync, true, true, false},
+        {"Zenon", "spork", &spork, true, true, false},
         {"Zenon", "getpoolinfo", &getpoolinfo, true, true, false},
 
 #ifdef ENABLE_WALLET
@@ -396,7 +397,6 @@ static const CRPCCommand vRPCCommands[] =
         {"wallet", "getreceivedbyaccount", &getreceivedbyaccount, false, false, true},
         {"wallet", "getreceivedbyaddress", &getreceivedbyaddress, false, false, true},
         {"wallet", "getstakingstatus", &getstakingstatus, false, false, true},
-        {"wallet", "getstakesplitthreshold", &getstakesplitthreshold, false, false, true},
         {"wallet", "gettransaction", &gettransaction, false, false, true},
         {"wallet", "getunconfirmedbalance", &getunconfirmedbalance, false, false, true},
         {"wallet", "getwalletinfo", &getwalletinfo, false, false, true},
@@ -420,7 +420,6 @@ static const CRPCCommand vRPCCommands[] =
         {"wallet", "sendtoaddress", &sendtoaddress, false, false, true},
         {"wallet", "sendtoaddressix", &sendtoaddressix, false, false, true},
         {"wallet", "setaccount", &setaccount, true, false, true},
-        {"wallet", "setstakesplitthreshold", &setstakesplitthreshold, false, false, true},
         {"wallet", "settxfee", &settxfee, true, false, true},
         {"wallet", "signmessage", &signmessage, true, false, true},
         {"wallet", "walletlock", &walletlock, true, false, true},
