@@ -17,9 +17,9 @@
 #include "main.h"
 #include "script/script.h"
 #include "timedata.h"
-#include "ui_interface.h"
+#include "guiinterface.h"
 #include "util.h"
-#include "wallet.h"
+#include "wallet/wallet.h"
 
 #include <stdint.h>
 #include <string>

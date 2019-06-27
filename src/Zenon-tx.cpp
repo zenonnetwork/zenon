@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2014 The Bitcoin developers
-// Copyright (c) 2015-2017 The PIVX developers
+// Copyright (c) 2015-2019 The PIVX developers
 // Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -13,7 +13,7 @@
 #include "primitives/transaction.h"
 #include "script/script.h"
 #include "script/sign.h"
-#include "ui_interface.h" // for _(...)
+#include "guiinterface.h" // for _(...)
 #include <univalue.h>
 #include "util.h"
 #include "utilmoneystr.h"
@@ -225,7 +225,6 @@ static void MutateTxAddOutAddr(CMutableTransaction& tx, const string& strInput)
     string strAddr = strInput.substr(pos + 1, string::npos);
     CBitcoinAddress addr(strAddr);
     if (!addr.IsValid())
-
         throw runtime_error("invalid TX output address");
 
     // build standard output script via GetScriptForDestination()

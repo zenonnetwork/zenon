@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2013 The Bitcoin developers
-// Copyright (c) 2017-2018 The PIVX developers
+// Copyright (c) 2017-2019 The PIVX developers
 // Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -14,7 +14,7 @@
 
 #include <openssl/aes.h>
 #include <openssl/evp.h>
-#include "wallet.h"
+#include "wallet/wallet.h"
 
 bool CCrypter::SetKeyFromPassphrase(const SecureString& strKeyData, const std::vector<unsigned char>& chSalt, const unsigned int nRounds, const unsigned int nDerivationMethod)
 {
@@ -256,7 +256,6 @@ bool CCryptoKeyStore::Unlock(const CKeyingMaterial& vMasterKeyIn)
 
         uint256 hashSeed;
         if (CWalletDB(pwalletMain->strWalletFile).ReadCurrentSeedHash(hashSeed)) {
-
             uint256 nSeed;
             if (!GetDeterministicSeed(hashSeed, nSeed)) {
                 return error("Failed to read zZNN seed from DB. Wallet is probably corrupt.");

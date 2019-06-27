@@ -1,5 +1,5 @@
 // Copyright (c) 2012-2014 The Bitcoin developers
-// Copyright (c) 2017 The PIVX developers
+// Copyright (c) 2017-2019 The PIVX developers
 // Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -125,6 +125,10 @@ bool CBloomFilter::IsWithinSizeConstraints() const
     return vData.size() <= MAX_BLOOM_FILTER_SIZE && nHashFuncs <= MAX_HASH_FUNCS;
 }
 
+/**
+ * Returns true if this filter will match anything. See {@link org.pivxj.core.BloomFilter#setMatchAll()}
+ * for when this can be a useful thing to do.
+ */
 bool CBloomFilter::MatchesAll() const {
     for (unsigned char b : vData)
         if (b !=  0xff)
@@ -215,7 +219,7 @@ bool CBloomFilter::IsRelevantAndUpdate(const CTransaction& tx)
             opcodetype opcode;
             if (!txin.scriptSig.GetOp(pc, opcode, data))
                 break;
-            if (txin.scriptSig.IsZerocoinSpend()){
+            if (txin.IsZerocoinSpend()) {
                 CDataStream s(vector<unsigned char>(txin.scriptSig.begin() + 44, txin.scriptSig.end()),
                         SER_NETWORK, PROTOCOL_VERSION);
 

@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2017 The PIVX developers
+// Copyright (c) 2015-2018 The PIVX developers
 // Copyright (c) 2017 The Zenon developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -109,20 +109,12 @@ signals:
     // Show progress dialog e.g. for verifychain
     void showProgress(const QString& title, int nProgress);
 
-    //! Fired when a new software update is available for downloading
-    void newVersionAvailable();
-
-    //! Fired when new software update is downloading from the server
-    void refreshDownloadProgress(const QString& title, int progress);
-
 public slots:
     void updateTimer();
     void updateMnTimer();
     void updateNumConnections(int numConnections);
     void updateAlert(const QString& hash, int status);
     void updateBanlist();
-    void updateNewVersionAvailable();
-    void updateDownloadProgress(const QString& title, int progress);
 };
 
 #endif // BITCOIN_QT_CLIENTMODEL_H

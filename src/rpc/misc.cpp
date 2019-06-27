@@ -1,12 +1,11 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2015-2019 The PIVX developers
 // Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "context.h"
 #include "base58.h"
 #include "clientversion.h"
 #include "init.h"
@@ -18,17 +17,14 @@
 #include "spork.h"
 #include "timedata.h"
 #include "util.h"
-#include "autoupdatemodel.h"
-
 #ifdef ENABLE_WALLET
-#include "wallet.h"
-#include "walletdb.h"
+#include "wallet/wallet.h"
+#include "wallet/walletdb.h"
 #endif
 
 #include <stdint.h>
 
 #include <boost/assign/list_of.hpp>
-#include <boost/algorithm/string/join.hpp>
 
 #include <univalue.h>
 
@@ -68,6 +64,7 @@ UniValue getinfo(const UniValue& params, bool fHelp)
             "  \"proxy\": \"host:port\",     (string, optional) the proxy used by the server\n"
             "  \"difficulty\": xxxxxx,       (numeric) the current difficulty\n"
             "  \"testnet\": true|false,      (boolean) if the server is using testnet or not\n"
+            "  \"moneysupply\" : \"supply\"  (numeric) The money supply when this block was added to the blockchain\n"
             "  \"keypoololdest\": xxxxxx,    (numeric) the timestamp (seconds since GMT epoch) of the oldest pre-generated key in the key pool\n"
             "  \"keypoolsize\": xxxx,        (numeric) how many new keys are pre-generated\n"
             "  \"unlocked_until\": ttt,      (numeric) the timestamp in seconds since epoch (midnight Jan 1 1970 GMT) that the wallet is unlocked for transfers, or 0 if the wallet is locked\n"
@@ -149,14 +146,7 @@ UniValue getinfo(const UniValue& params, bool fHelp)
     else if (mapHashedBlocks.count(chainActive.Tip()->nHeight - 1) && nLastCoinStakeSearchInterval)
         nStaking = true;
     obj.push_back(Pair("staking status", (nStaking ? "Staking Active" : "Staking Not Active")));
-
-    vector<string> warnings;
-    warnings.push_back(GetWarnings("statusbar"));
-    if (GetContext().GetAutoUpdateModel()->IsUpdateAvailable())
-        warnings.push_back(strprintf("New version is available, please update your wallet! Go to: %s", GetContext().GetAutoUpdateModel()->GetUpdateUrlTag()));
-
-    obj.push_back(Pair("errors", boost::algorithm::join(warnings, " ")));
-
+    obj.push_back(Pair("errors", GetWarnings("statusbar")));
     return obj;
 }
 
@@ -196,6 +186,7 @@ UniValue mnsync(const UniValue& params, bool fHelp)
 
             "\nResult ('reset' mode):\n"
             "\"status\"     (string) 'success'\n"
+
             "\nExamples:\n" +
             HelpExampleCli("mnsync", "\"status\"") + HelpExampleRpc("mnsync", "\"status\""));
     }
@@ -530,7 +521,6 @@ UniValue verifymessage(const UniValue& params, bool fHelp)
 
     CBitcoinAddress addr(strAddress);
     if (!addr.IsValid())
-
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid address");
 
     CKeyID keyID;

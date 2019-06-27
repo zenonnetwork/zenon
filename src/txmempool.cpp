@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
-// Copyright (c) 2016-2017 The PIVX developers
+// Copyright (c) 2016-2019 The PIVX developers
 // Copyright (c) 2017 The Zenon developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -412,7 +412,7 @@ bool CTxMemPool::addUnchecked(const uint256& hash, const CTxMemPoolEntry& entry)
     {
         mapTx[hash] = entry;
         const CTransaction& tx = mapTx[hash].GetTx();
-        if(!tx.IsZerocoinSpend()) {
+        if(!tx.HasZerocoinSpendInputs()) {
             for (unsigned int i = 0; i < tx.vin.size(); i++)
                 mapNextTx[tx.vin[i].prevout] = CInPoint(&tx, i);
         }
@@ -566,11 +566,11 @@ void CTxMemPool::check(const CCoinsViewCache* pcoins) const
                 fDependsWait = true;
             } else {
                 const CCoins* coins = pcoins->AccessCoins(txin.prevout.hash);
-                if(!txin.scriptSig.IsZerocoinSpend())
+                if(!txin.IsZerocoinSpend() && !txin.IsZerocoinPublicSpend())
                     assert(coins && coins->IsAvailable(txin.prevout.n));
             }
             // Check whether its inputs are marked in mapNextTx.
-            if(!txin.scriptSig.IsZerocoinSpend()) {
+            if(!txin.IsZerocoinSpend()  && !txin.IsZerocoinPublicSpend()) {
                 std::map<COutPoint, CInPoint>::const_iterator it3 = mapNextTx.find(txin.prevout);
                 assert(it3 != mapNextTx.end());
                 assert(it3->second.ptx == &tx);

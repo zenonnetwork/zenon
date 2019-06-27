@@ -1,7 +1,7 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2015-2019 The PIVX developers
 // Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -13,7 +13,7 @@
 #include "main.h"
 #include "net.h"
 #include "primitives/transaction.h"
-#include "primitives/deterministicmint.h"
+#include "zznn/deterministicmint.h"
 #include "rpc/server.h"
 #include "script/script.h"
 #include "script/script_error.h"
@@ -24,7 +24,7 @@
 #include "utilmoneystr.h"
 #include "zznnchain.h"
 #ifdef ENABLE_WALLET
-#include "wallet.h"
+#include "wallet/wallet.h"
 #endif
 
 #include <stdint.h>
@@ -212,12 +212,12 @@ UniValue listunspent(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() > 4)
         throw runtime_error(
-            "listunspent ( minconf maxconf  [\"address\",...] )\n"
+            "listunspent ( minconf maxconf  [\"address\",...] watchonlyconfig )\n"
             "\nReturns array of unspent transaction outputs\n"
             "with between minconf and maxconf (inclusive) confirmations.\n"
             "Optionally filter to only include txouts paid to specified addresses.\n"
             "Results are an array of Objects, each of which has:\n"
-            "{txid, vout, scriptPubKey, amount, confirmations}\n"
+            "{txid, vout, scriptPubKey, amount, confirmations, spendable}\n"
 
             "\nArguments:\n"
             "1. minconf          (numeric, optional, default=1) The minimum confirmations to filter\n"
@@ -227,18 +227,20 @@ UniValue listunspent(const UniValue& params, bool fHelp)
             "      \"address\"   (string) Zenon address\n"
             "      ,...\n"
             "    ]\n"
-            "4. watchonlyconfig  (numberic, optional, default=1) 1 = list regular unspent transactions, 2 = list only watchonly transactions,  3 = list all unspent transactions (including watchonly)\n"
+            "4. watchonlyconfig  (numeric, optional, default=1) 1 = list regular unspent transactions, 2 = list only watchonly transactions,  3 = list all unspent transactions (including watchonly)\n"
 
             "\nResult\n"
             "[                   (array of json object)\n"
             "  {\n"
-            "    \"txid\" : \"txid\",        (string) the transaction id \n"
+            "    \"txid\" : \"txid\",        (string) the transaction id\n"
             "    \"vout\" : n,               (numeric) the vout value\n"
-            "    \"address\" : \"address\",  (string) the Zenon address\n"
+            "    \"address\" : \"address\",  (string) the znn address\n"
             "    \"account\" : \"account\",  (string) The associated account, or \"\" for the default account\n"
             "    \"scriptPubKey\" : \"key\", (string) the script key\n"
+            "    \"redeemScript\" : \"key\", (string) the redeemscript key\n"
             "    \"amount\" : x.xxx,         (numeric) the transaction amount in btc\n"
-            "    \"confirmations\" : n       (numeric) The number of confirmations\n"
+            "    \"confirmations\" : n,      (numeric) The number of confirmations\n"
+            "    \"spendable\" : true|false  (boolean) Whether we have the private keys to spend this output\n"
             "  }\n"
             "  ,...\n"
             "]\n"
@@ -868,3 +870,192 @@ UniValue sendrawtransaction(const UniValue& params, bool fHelp)
 
     return hashTx.GetHex();
 }
+
+UniValue getspentzerocoinamount(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 2)
+        throw runtime_error(
+            "getspentzerocoinamount hexstring index\n"
+            "\nReturns value of spent zerocoin output designated by transaction hash and input index.\n"
+
+            "\nArguments:\n"
+            "1. hash          (hexstring) Transaction hash\n"
+            "2. index         (int) Input index\n"
+
+            "\nResult:\n"
+            "\"value\"        (int) Spent output value, -1 if error\n"
+
+            "\nExamples:\n" +
+            HelpExampleCli("getspentzerocoinamount", "78021ebf92a80dfccef1413067f1222e37535399797cce029bb40ad981131706 0"));
+
+    LOCK(cs_main);
+
+    uint256 txHash = ParseHashV(params[0], "parameter 1");
+    int inputIndex = params[1].get_int();
+    if (inputIndex < 0)
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter for transaction input");
+
+    CTransaction tx;
+    uint256 hashBlock = 0;
+    if (!GetTransaction(txHash, tx, hashBlock, true))
+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "No information available about transaction");
+
+    if (inputIndex >= (int)tx.vin.size())
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter for transaction input");
+
+    const CTxIn& input = tx.vin[inputIndex];
+    if (!input.IsZerocoinSpend())
+        return -1;
+
+    libzerocoin::CoinSpend spend = TxInToZerocoinSpend(input);
+    CAmount nValue = libzerocoin::ZerocoinDenominationToAmount(spend.getDenomination());
+    return FormatMoney(nValue);
+}
+
+#ifdef ENABLE_WALLET
+UniValue createrawzerocoinstake(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+            "createrawzerocoinstake mint_input \n"
+            "\nCreates raw zZNN coinstakes (without MN output).\n" +
+            HelpRequiringPassphrase() + "\n"
+
+            "\nArguments:\n"
+            "1. mint_input      (hex string, required) serial hash of the mint used as input\n"
+
+            "\nResult:\n"
+            "{\n"
+            "   \"hex\": \"xxx\",           (hex string) raw coinstake transaction\n"
+            "   \"private-key\": \"xxx\"    (hex string) private key of the input mint [needed to\n"
+            "                                            sign a block with this stake]"
+            "}\n"
+            "\nExamples\n" +
+            HelpExampleCli("createrawzerocoinstake", "0d8c16eee7737e3cc1e4e70dc006634182b175e039700931283b202715a0818f") +
+            HelpExampleRpc("createrawzerocoinstake", "0d8c16eee7737e3cc1e4e70dc006634182b175e039700931283b202715a0818f"));
+
+
+    assert(pwalletMain != NULL);
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+
+    if(GetAdjustedTime() > GetSporkValue(SPORK_16_ZEROCOIN_MAINTENANCE_MODE))
+        throw JSONRPCError(RPC_WALLET_ERROR, "zZNN is currently disabled due to maintenance.");
+
+    std::string serial_hash = params[0].get_str();
+    if (!IsHex(serial_hash))
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, expected hex serial hash");
+
+    EnsureWalletIsUnlocked();
+
+    uint256 hashSerial(serial_hash);
+    CZerocoinMint input_mint;
+    if (!pwalletMain->GetMint(hashSerial, input_mint)) {
+        std::string strErr = "Failed to fetch mint associated with serial hash " + serial_hash;
+        throw JSONRPCError(RPC_WALLET_ERROR, strErr);
+    }
+
+    CMutableTransaction coinstake_tx;
+
+    // create the zerocoinmint output (one spent denom + three 1-zZNN denom)
+    libzerocoin::CoinDenomination staked_denom = input_mint.GetDenomination();
+    std::vector<CTxOut> vOutMint(5);
+    // Mark coin stake transaction
+    CScript scriptEmpty;
+    scriptEmpty.clear();
+    vOutMint[0] = CTxOut(0, scriptEmpty);
+    CDeterministicMint dMint;
+    if (!pwalletMain->CreateZZNNOutPut(staked_denom, vOutMint[1], dMint))
+        throw JSONRPCError(RPC_WALLET_ERROR, "failed to create new zznn output");
+
+    for (int i=2; i<5; i++) {
+        if (!pwalletMain->CreateZZNNOutPut(libzerocoin::ZQ_ONE, vOutMint[i], dMint))
+            throw JSONRPCError(RPC_WALLET_ERROR, "failed to create new zznn output");
+    }
+    coinstake_tx.vout = vOutMint;
+
+    //hash with only the output info in it to be used in Signature of Knowledge
+    uint256 hashTxOut = coinstake_tx.GetHash();
+    CZerocoinSpendReceipt receipt;
+
+    // create the zerocoinspend input
+    CTxIn newTxIn;
+    // !TODO: mint checks
+    if (!pwalletMain->MintToTxIn(input_mint, hashTxOut, newTxIn, receipt, libzerocoin::SpendType::STAKE))
+        throw JSONRPCError(RPC_WALLET_ERROR, "failed to create zc-spend stake input");
+
+    coinstake_tx.vin.push_back(newTxIn);
+
+    UniValue ret(UniValue::VOBJ);
+    ret.push_back(Pair("hex", EncodeHexTx(coinstake_tx)));
+    CPrivKey pk = input_mint.GetPrivKey();
+    CKey key;
+    key.SetPrivKey(pk, true);
+    ret.push_back(Pair("private-key", HexStr(key)));
+    return ret;
+
+}
+
+UniValue createrawzerocoinpublicspend(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 2)
+        throw runtime_error(
+            "createrawzerocoinpublicspend mint_input \n"
+            "\nCreates raw zZNN public spend.\n" +
+            HelpRequiringPassphrase() + "\n"
+
+            "\nArguments:\n"
+            "1. mint_input      (hex string, required) serial hash of the mint used as input\n"
+            "2. \"address\"     (string, optional, default=change) Send to specified address or to a new change address.\n"
+
+
+            "\nResult:\n"
+            "{\n"
+            "   \"hex\": \"xxx\",           (hex string) raw public spend signed transaction\n"
+            "}\n"
+            "\nExamples\n" +
+            HelpExampleCli("createrawzerocoinpublicspend", "0d8c16eee7737e3cc1e4e70dc006634182b175e039700931283b202715a0818f") +
+            HelpExampleRpc("createrawzerocoinpublicspend", "0d8c16eee7737e3cc1e4e70dc006634182b175e039700931283b202715a0818f"));
+
+
+    assert(pwalletMain != NULL);
+    LOCK2(cs_main, pwalletMain->cs_wallet);
+
+    std::string serial_hash = params[0].get_str();
+    if (!IsHex(serial_hash))
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, expected hex serial hash");
+
+    std::string address_str = "";
+    CBitcoinAddress address;
+    CBitcoinAddress* addr_ptr = nullptr;
+    if (params.size() > 1) {
+        address_str = params[1].get_str();
+        address = CBitcoinAddress(address_str);
+        if(!address.IsValid())
+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid ZNN address");
+        addr_ptr = &address;
+    }
+
+    EnsureWalletIsUnlocked();
+
+    uint256 hashSerial(serial_hash);
+    CZerocoinMint input_mint;
+    if (!pwalletMain->GetMint(hashSerial, input_mint)) {
+        std::string strErr = "Failed to fetch mint associated with serial hash " + serial_hash;
+        throw JSONRPCError(RPC_WALLET_ERROR, strErr);
+    }
+    CAmount nAmount = input_mint.GetDenominationAsAmount();
+    vector<CZerocoinMint> vMintsSelected = vector<CZerocoinMint>(1,input_mint);
+
+    // create the spend
+    CWalletTx rawTx;
+    CZerocoinSpendReceipt receipt;
+    CReserveKey reserveKey(pwalletMain);
+    vector<CDeterministicMint> vNewMints;
+    if (!pwalletMain->CreateZerocoinSpendTransaction(nAmount, rawTx, reserveKey, receipt, vMintsSelected, vNewMints, false, true, addr_ptr, true))
+        throw JSONRPCError(RPC_WALLET_ERROR, receipt.GetStatusMessage());
+
+    // output the raw transaction
+    return EncodeHexTx(rawTx);
+}
+#endif
+

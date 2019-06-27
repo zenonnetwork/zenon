@@ -1,7 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2015-2019 The PIVX developers
 // Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -11,9 +11,8 @@
 #endif
 
 #include "init.h"
-#include "context.h"
-#include "accumulatorcheckpoints.h"
-#include "accumulators.h"
+
+#include "zznn/accumulators.h"
 #include "activemasternode.h"
 #include "addrman.h"
 #include "amount.h"
@@ -37,24 +36,23 @@
 #include "sporkdb.h"
 #include "txdb.h"
 #include "torcontrol.h"
-#include "ui_interface.h"
+#include "guiinterface.h"
 #include "util.h"
 #include "utilmoneystr.h"
 #include "validationinterface.h"
+#include "zznn/accumulatorcheckpoints.h"
 #include "zznnchain.h"
 
 #ifdef ENABLE_WALLET
-#include "db.h"
-#include "wallet.h"
-#include "walletdb.h"
-#include "accumulators.h"
+#include "wallet/db.h"
+#include "wallet/wallet.h"
+#include "wallet/walletdb.h"
 
 #endif
 
 #include <fstream>
 #include <stdint.h>
 #include <stdio.h>
-#include <exception>
 
 #ifndef WIN32
 #include <signal.h>
@@ -333,12 +331,6 @@ bool static InitWarning(const std::string& str)
     return true;
 }
 
-bool static InitInformation(const std::string& str)
-{
-    uiInterface.ThreadSafeMessageBox(str, "", CClientUIInterface::MSG_INFORMATION);
-    return true;
-}
-
 bool static Bind(const CService& addr, unsigned int flags)
 {
     if (!(flags & BF_EXPLICIT) && IsLimited(addr))
@@ -407,14 +399,15 @@ std::string HelpMessage(HelpMessageMode mode)
     strUsage += HelpMessageOpt("-pid=<file>", strprintf(_("Specify pid file (default: %s)"), "Zenond.pid"));
 #endif
     strUsage += HelpMessageOpt("-reindex", _("Rebuild block chain index from current blk000??.dat files") + " " + _("on startup"));
+    strUsage += HelpMessageOpt("-reindexaccumulators", _("Reindex the accumulator database") + " " + _("on startup"));
+    strUsage += HelpMessageOpt("-reindexmoneysupply", _("Reindex the ZNN and zZNN money supply statistics") + " " + _("on startup"));
     strUsage += HelpMessageOpt("-resync", _("Delete blockchain folders and resync from scratch") + " " + _("on startup"));
 #if !defined(WIN32)
     strUsage += HelpMessageOpt("-sysperms", _("Create new files with system default permissions, instead of umask 077 (only effective with disabled wallet functionality)"));
 #endif
     strUsage += HelpMessageOpt("-txindex", strprintf(_("Maintain a full transaction index, used by the getrawtransaction rpc call (default: %u)"), 0));
     strUsage += HelpMessageOpt("-forcestart", _("Attempt to force blockchain corruption recovery") + " " + _("on startup"));
-    strUsage += HelpMessageOpt("-checkforupdate=<seconds>", _("Check periodically if new version of the software is available, default: 24h = 86400sec"));
-    strUsage += HelpMessageOpt("-checkforupdateurl=<GITHUB_RELEASE_URL>", _("Check periodically if new version of the software is available on GITHUB_RELEASE_URL, default: GITHUB_RELEASE_URL"));
+
     strUsage += HelpMessageGroup(_("Connection options:"));
     strUsage += HelpMessageOpt("-addnode=<ip>", _("Add a node to connect to and attempt to keep the connection open"));
     strUsage += HelpMessageOpt("-banscore=<n>", strprintf(_("Threshold for disconnecting misbehaving peers (default: %u)"), 100));
@@ -528,6 +521,7 @@ std::string HelpMessage(HelpMessageMode mode)
         strUsage += HelpMessageOpt("-relaypriority", strprintf(_("Require high priority for relaying free or low-fee transactions (default:%u)"), 1));
         strUsage += HelpMessageOpt("-maxsigcachesize=<n>", strprintf(_("Limit size of signature cache to <n> entries (default: %u)"), 50000));
     }
+    strUsage += HelpMessageOpt("-maxtipage=<n>", strprintf("Maximum tip age in seconds to consider node in initial block download (default: %u)", DEFAULT_MAX_TIP_AGE));
     strUsage += HelpMessageOpt("-minrelaytxfee=<amt>", strprintf(_("Fees (in ZNN/Kb) smaller than this are considered zero fee for relaying (default: %s)"), FormatMoney(::minRelayTxFee.GetFeePerK())));
     strUsage += HelpMessageOpt("-printtoconsole", strprintf(_("Send trace/debug info to console instead of debug.log file (default: %u)"), 0));
     if (GetBoolArg("-help-debug", false)) {
@@ -669,6 +663,21 @@ void ThreadImport(std::vector<boost::filesystem::path> vImportFiles)
         LogPrintf("Reindexing finished\n");
         // To avoid ending up in a situation without genesis block, re-try initializing (no-op if reindexing worked):
         InitBlockIndex();
+    }
+
+    // hardcoded $DATADIR/bootstrap.dat
+    filesystem::path pathBootstrap = GetDataDir() / "bootstrap.dat";
+    if (filesystem::exists(pathBootstrap)) {
+        FILE* file = fopen(pathBootstrap.string().c_str(), "rb");
+        if (file) {
+            CImportingNow imp;
+            filesystem::path pathBootstrapOld = GetDataDir() / "bootstrap.dat.old";
+            LogPrintf("Importing bootstrap.dat...\n");
+            LoadExternalBlockFile(file);
+            RenameOver(pathBootstrap, pathBootstrapOld);
+        } else {
+            LogPrintf("Warning: Could not open bootstrap file %s\n", pathBootstrap.string());
+        }
     }
 
     // -loadblock=
@@ -995,6 +1004,8 @@ bool AppInit2()
 
     }
 
+    nMaxTipAge = GetArg("-maxtipage", DEFAULT_MAX_TIP_AGE);
+
     // ********************************************************* Step 4: application initialization: dir lock, daemonize, pidfile, debug log
 
     // Initialize elliptic curve code
@@ -1092,7 +1103,7 @@ bool AppInit2()
                 sourceFile.make_preferred();
                 backupFile.make_preferred();
                 if (boost::filesystem::exists(sourceFile)) {
-#if BOOST_VERSION >= 158000
+#if BOOST_VERSION >= 105800
                     try {
                         boost::filesystem::copy_file(sourceFile, backupFile);
                         LogPrintf("Creating backup of %s -> %s\n", sourceFile, backupFile);
@@ -1479,30 +1490,48 @@ bool AppInit2()
                     }
                 }
 
-                // Reindex for wrapped serials inflation.
-                bool reindexDueWrappedSerials = false;
                 // Wrapped serials inflation check
+                bool reindexDueWrappedSerials = false;
+                bool reindexZerocoin = false;
                 int chainHeight = chainActive.Height();
-                if(chainHeight >= Params().Zerocoin_Block_EndFakeSerial()){
-                    CBlockIndex* pblockindex = chainActive[Params().Zerocoin_Block_EndFakeSerial()];
-                    if(Params().NetworkID() == CBaseChainParams::MAIN) {
-                        // Supply needs to be exactly 4131563 (last block post attack supply) + GetWrapppedSerialInflationAmount
-                        LogPrintf("Current GetZerocoinSupply: %d vs %d",pblockindex->GetZerocoinSupply() , ((4131563 * COIN) + GetWrapppedSerialInflationAmount()));
-                        if (pblockindex->GetZerocoinSupply() !=  ((4131563 * COIN) + GetWrapppedSerialInflationAmount()) ) {
-                            // Trigger reindex.
-                            reindexDueWrappedSerials = true;
-                        }
+                if(Params().NetworkID() == CBaseChainParams::MAIN && chainHeight > Params().Zerocoin_Block_EndFakeSerial()) {
+
+                    // Supply needs to be exactly GetSupplyBeforeFakeSerial + GetWrapppedSerialInflationAmount
+                    CBlockIndex* pblockindex = chainActive[Params().Zerocoin_Block_EndFakeSerial() + 1];
+                    CAmount zznnSupplyCheckpoint = Params().GetSupplyBeforeFakeSerial() + GetWrapppedSerialInflationAmount();
+
+                    if (pblockindex->GetZerocoinSupply() < zznnSupplyCheckpoint) {
+                        // Trigger reindex due wrapping serials
+                        LogPrintf("Current GetZerocoinSupply: %d vs %d\n", pblockindex->GetZerocoinSupply()/COIN , zznnSupplyCheckpoint/COIN);
+                        reindexDueWrappedSerials = true;
+                    } else if (pblockindex->GetZerocoinSupply() > zznnSupplyCheckpoint) {
+                        // Trigger global zZNN reindex
+                        reindexZerocoin = true;
+                        LogPrintf("Current GetZerocoinSupply: %d vs %d\n", pblockindex->GetZerocoinSupply()/COIN , zznnSupplyCheckpoint/COIN);
                     }
+
                 }
 
+                // Reindex only for wrapped serials inflation.
+                if (reindexDueWrappedSerials)
+                    AddWrappedSerialsInflation();
+
                 // Recalculate money supply for blocks that are impacted by accounting issue after zerocoin activation
-                if (GetBoolArg("-reindexmoneysupply", false) || reindexDueWrappedSerials) {
+                if (GetBoolArg("-reindexmoneysupply", false) || reindexZerocoin) {
                     if (chainHeight > Params().Zerocoin_StartHeight()) {
                         RecalculateZZNNMinted();
                         RecalculateZZNNSpent();
                     }
                     // Recalculate from the zerocoin activation or from scratch.
-                    RecalculateZNNSupply(reindexDueWrappedSerials ? Params().Zerocoin_StartHeight() : 1);
+                    RecalculateZNNSupply(reindexZerocoin ? Params().Zerocoin_StartHeight() : 1);
+                }
+
+                // Check Recalculation result
+                if(Params().NetworkID() == CBaseChainParams::MAIN && chainHeight > Params().Zerocoin_Block_EndFakeSerial()) {
+                    CBlockIndex* pblockindex = chainActive[Params().Zerocoin_Block_EndFakeSerial() + 1];
+                    CAmount zznnSupplyCheckpoint = Params().GetSupplyBeforeFakeSerial() + GetWrapppedSerialInflationAmount();
+                    if (pblockindex->GetZerocoinSupply() != zznnSupplyCheckpoint)
+                        return InitError(strprintf("ZerocoinSupply Recalculation failed: %d vs %d", pblockindex->GetZerocoinSupply()/COIN , zznnSupplyCheckpoint/COIN));
                 }
 
                 // Force recalculation of accumulators.
@@ -1872,7 +1901,7 @@ bool AppInit2()
 
     nZeromintPercentage = GetArg("-zeromintpercentage", 10);
     if (nZeromintPercentage > 100) nZeromintPercentage = 100;
-    if (nZeromintPercentage < 10) nZeromintPercentage = 10;
+    if (nZeromintPercentage < 1) nZeromintPercentage = 1;
 
     nPreferredDenom  = GetArg("-preferredDenom", 0);
     if (nPreferredDenom != 0 && nPreferredDenom != 1 && nPreferredDenom != 5 && nPreferredDenom != 10 && nPreferredDenom != 50 &&
@@ -1880,20 +1909,6 @@ bool AppInit2()
         LogPrintf("-preferredDenom: invalid denomination parameter %d. Default value used\n", nPreferredDenom);
         nPreferredDenom = 0;
     }
-
-// XX42 Remove/refactor code below. Until then provide safe defaults
-    nAnonymizeZenonAmount = 2;
-
-//    nLiquidityProvider = GetArg("-liquidityprovider", 0); //0-100
-//    if (nLiquidityProvider != 0) {
-//        obfuScationPool.SetMinBlockSpacing(std::min(nLiquidityProvider, 100) * 15);
-//        fEnableZeromint = true;
-//        nZeromintPercentage = 99999;
-//    }
-//
-//    nAnonymizeZenonAmount = GetArg("-anonymizeZenonamount", 0);
-//    if (nAnonymizeZenonAmount > 999999) nAnonymizeZenonAmount = 999999;
-//    if (nAnonymizeZenonAmount < 2) nAnonymizeZenonAmount = 2;
 
     fEnableSwiftTX = GetBoolArg("-enableswifttx", fEnableSwiftTX);
     nSwiftTXDepth = GetArg("-swifttxdepth", nSwiftTXDepth);
@@ -1907,7 +1922,6 @@ bool AppInit2()
 
     LogPrintf("fLiteMode %d\n", fLiteMode);
     LogPrintf("nSwiftTXDepth %d\n", nSwiftTXDepth);
-    LogPrintf("Anonymize Zenon Amount %d\n", nAnonymizeZenonAmount);
     LogPrintf("Budget Mode %s\n", strBudgetMode.c_str());
 
     /* Denominations
@@ -1925,10 +1939,6 @@ bool AppInit2()
     obfuScationDenominations.push_back((10 * COIN) + 10000);
     obfuScationDenominations.push_back((1 * COIN) + 1000);
     obfuScationDenominations.push_back((.1 * COIN) + 100);
-    /* Disabled till we need them
-    obfuScationDenominations.push_back( (.01      * COIN)+10 );
-    obfuScationDenominations.push_back( (.001     * COIN)+1 );
-    */
 
     obfuScationPool.InitCollateralAddress();
 
@@ -1981,6 +1991,11 @@ bool AppInit2()
 
         // Run a thread to flush wallet periodically
         threadGroup.create_thread(boost::bind(&ThreadFlushWalletDB, boost::ref(pwalletMain->strWalletFile)));
+
+        if (GetBoolArg("-precompute", false)) {
+            // Run a thread to precompute any zZNN spends
+            threadGroup.create_thread(boost::bind(&ThreadPrecomputeSpends));
+        }
     }
 #endif
 

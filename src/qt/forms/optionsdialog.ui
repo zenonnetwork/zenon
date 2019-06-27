@@ -252,10 +252,6 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_Wallet">
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_2_Wallet">
-        </layout>
-       </item>
-       <item>
         <widget class="QGroupBox" name="groupBox">
          <property name="title">
           <string/>

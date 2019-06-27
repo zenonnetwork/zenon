@@ -23,6 +23,7 @@ RAW_TEST_FILES = test/data/alertTests.raw
 GENERATED_TEST_FILES = $(JSON_TEST_FILES:.json=.json.h) $(RAW_TEST_FILES:.raw=.raw.h)
 
 BITCOIN_TEST_SUITE = \
+  test/test_Zenon.h \
   test/test_Zenon.cpp
 # test_Zenon binary #
 BITCOIN_TESTS =\
@@ -30,9 +31,11 @@ BITCOIN_TESTS =\
   test/zerocoin_denomination_tests.cpp\
   test/zerocoin_transactions_tests.cpp \
   test/zerocoin_coinspend_tests.cpp \
+  test/zerocoin_bignum_tests.cpp \
   test/benchmark_zerocoin.cpp \
   test/tutorial_zerocoin.cpp \
   test/libzerocoin_tests.cpp \
+  test/addrman_tests.cpp \
   test/allocator_tests.cpp \
   test/base32_tests.cpp \
   test/base58_tests.cpp \
@@ -42,16 +45,13 @@ BITCOIN_TESTS =\
   test/Checkpoints_tests.cpp \
   test/coins_tests.cpp \
   test/compress_tests.cpp \
-  test/context_tests.cpp \
   test/crypto_tests.cpp \
-  test/curl_tests.cpp \
   test/DoS_tests.cpp \
   test/getarg_tests.cpp \
   test/hash_tests.cpp \
   test/key_tests.cpp \
   test/main_tests.cpp \
   test/mempool_tests.cpp \
-  test/minizip_tests.cpp \
   test/mruset_tests.cpp \
   test/multisig_tests.cpp \
   test/netbase_tests.cpp \
@@ -77,20 +77,20 @@ BITCOIN_TESTS =\
 if ENABLE_WALLET
 BITCOIN_TESTS += \
   test/accounting_tests.cpp \
-  test/wallet_tests.cpp \
+  wallet/test/wallet_tests.cpp \
   test/rpc_wallet_tests.cpp
 endif
 
 test_test_Zenon_SOURCES = $(BITCOIN_TEST_SUITE) $(BITCOIN_TESTS) $(JSON_TEST_FILES) $(RAW_TEST_FILES)
 test_test_Zenon_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) -I$(builddir)/test/ $(TESTDEFS) $(EVENT_FLAGS)
 test_test_Zenon_LDADD = $(LIBBITCOIN_SERVER) $(LIBBITCOIN_CLI) $(LIBBITCOIN_COMMON) $(LIBBITCOIN_UTIL) $(LIBBITCOIN_CRYPTO) $(LIBUNIVALUE) $(LIBBITCOIN_ZEROCOIN) \
-  $(LIBLEVELDB) $(LIBLEVELDB_SSE42) $(LIBMEMENV) $(LIBMINIZIP) $(BOOST_LIBS) $(BOOST_UNIT_TEST_FRAMEWORK_LIB) $(LIBSECP256K1) $(EVENT_LIBS) $(EVENT_PTHREADS_LIBS)
+  $(LIBLEVELDB) $(LIBLEVELDB_SSE42) $(LIBMEMENV) $(BOOST_LIBS) $(BOOST_UNIT_TEST_FRAMEWORK_LIB) $(LIBSECP256K1) $(EVENT_LIBS) $(EVENT_PTHREADS_LIBS)
 if ENABLE_WALLET
 test_test_Zenon_LDADD += $(LIBBITCOIN_WALLET)
 endif
 test_test_Zenon_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 
-test_test_Zenon_LDADD += $(LIBBITCOIN_CONSENSUS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(CURL_LIBS)
+test_test_Zenon_LDADD += $(LIBBITCOIN_CONSENSUS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS)
 test_test_Zenon_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) -static
 
 if ENABLE_ZMQ

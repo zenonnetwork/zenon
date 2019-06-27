@@ -80,7 +80,6 @@ protected:
     bool eventFilter(QObject* object, QEvent* event);
 
 private:
-
     ClientModel* clientModel;
     WalletFrame* walletFrame;
 

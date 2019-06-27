@@ -1,7 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2015-2019 The PIVX developers
 // Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -20,11 +20,7 @@
 #include "utiltime.h"
 
 #include <stdarg.h>
-#include <stdint.h>
 
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/trim.hpp>
-#include <boost/algorithm/string/classification.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
@@ -92,19 +88,6 @@
 #include <openssl/crypto.h>
 #include <openssl/rand.h>
 
-// Work around clang compilation problem in Boost 1.46:
-// /usr/include/boost/program_options/detail/config_file.hpp:163:17: error: call to function 'to_internal' that is neither visible in the template definition nor found by argument-dependent lookup
-// See also: http://stackoverflow.com/questions/10020179/compilation-fail-in-boost-librairies-program-options
-//           http://clang.debian.net/status.php?version=3.0&key=CANNOT_FIND_FUNCTION
-namespace boost
-{
-namespace program_options
-{
-std::string to_internal(const std::string&);
-}
-
-} // namespace boost
-
 using namespace std;
 
 // Zenon only features
@@ -123,8 +106,6 @@ int nZeromintPercentage = 10;
 int nPreferredDenom = 0;
 const int64_t AUTOMINT_DELAY = (60 * 5); // Wait at least 5 minutes until Automint starts
 
-int nAnonymizeZenonAmount = 1000;
-int nLiquidityProvider = 0;
 /** Spork enforcement enabled time */
 int64_t enforceMasternodePaymentsTime = 4085657524;
 bool fSucessfullyLoaded = false;
@@ -248,6 +229,7 @@ bool LogAcceptCategory(const char* category)
                 ptrCategory->insert(string("mnpayments"));
                 ptrCategory->insert(string("zero"));
                 ptrCategory->insert(string("mnbudget"));
+                ptrCategory->insert(string("precompute"));
                 ptrCategory->insert(string("staking"));
             }
         }
@@ -347,12 +329,6 @@ void ParseParameters(int argc, const char* const argv[])
         mapArgs[str] = strValue;
         mapMultiArgs[str].push_back(strValue);
     }
-}
-
-bool DefinedArg(const std::string& strArg)
-{
-    assert(!strArg.empty());
-    return mapArgs.find(strArg) != mapArgs.end();
 }
 
 std::string GetArg(const std::string& strArg, const std::string& strDefault)
@@ -841,81 +817,4 @@ void SetThreadPriority(int nPriority)
     setpriority(PRIO_PROCESS, 0, nPriority);
 #endif // PRIO_THREAD
 #endif // WIN32
-}
-
-bool FindUpdateUrlForThisPlatform(const std::string& info, std::string& url, std::string& error)
-{
-    if (info.empty()) {
-        error = "info is empty";
-        return false;
-    }
-
-    string platform;
-
-#if defined(WIN32)
-  #if (INTPTR_MAX == INT64_MAX)
-    platform = "win64";
-  #else
-    platform = "win32";
-  #endif
-#elif defined(MAC_OSX)
-    platform = "macos";
-#elif defined(__linux__)
-  #if defined(__arm__)
-    #if (INTPTR_MAX == INT64_MAX)
-      platform = "aarch64";
-    #else
-      platform = "arm";
-    #endif
-  #else
-    #if (INTPTR_MAX == INT64_MAX)
-      platform = "linux64";
-    #else
-      platform = "linux32";
-    #endif
-  #endif
-#else
-    #error "unknown platform OS"
-#endif
-
-    DebugPrintf("%s: %s platform detected\n", __func__, platform);
-
-    vector<string> lines;
-    boost::algorithm::split(lines, info, boost::algorithm::is_any_of("\n"));
-    for (string line : lines) {
-        vector<string> platformurl;
-        boost::algorithm::trim(line);
-        boost::algorithm::split(platformurl, line, boost::algorithm::is_any_of("="));
-        if (platformurl.size() != 2) {
-            LogPrintf("%s: invalid line: %s\n", __func__, line);
-        } else if (platformurl.front() == platform) {
-            url = platformurl.back();
-            return true;
-        }
-        else; // continue search
-    }
-
-    error = strprintf("Platform %s was not found in the input: %s", platform, info);
-    return false;
-}
-/** convert size to the human readable string */
-std::string HumanReadableSize(int64_t size, bool si)
-{
-    const int unit = si ? 1000 : 1024;
-    const char* units1[] = {"B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
-    const char* units2[] = {"B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"};
-    const char** units = si ? units1 : units2;
-
-    static_assert((sizeof(units1) / sizeof(units1[0])) == (sizeof(units2) / sizeof(units2[0])), "Number of elements in units1 and units2 must be equal.");
-
-    int i = 0;
-    while (size > unit) {
-       size /= unit;
-       i += 1;
-    }
-
-    if (size <= 0 || i >= sizeof(units1) / sizeof(units1[0]))
-        return "0";
-    else
-        return strprintf("%.*f %s", i, size, units[i]);
 }

@@ -1,7 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2015-2019 The PIVX developers
 // Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -19,13 +19,9 @@
 #include "obfuscation.h"
 #include "primitives/transaction.h"
 #include "scheduler.h"
-#include "ui_interface.h"
-#include "curl.h"
-#include "context.h"
-#include "autoupdatemodel.h"
-
+#include "guiinterface.h"
 #ifdef ENABLE_WALLET
-#include "wallet.h"
+#include "wallet/wallet.h"
 #endif // ENABLE_WALLET
 
 #ifdef WIN32
@@ -43,7 +39,6 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/thread.hpp>
-#include <boost/algorithm/string/replace.hpp>
 
 // Dump addresses to peers.dat every 15 minutes (900s)
 #define DUMP_ADDRESSES_INTERVAL 900
@@ -1714,80 +1709,6 @@ void static Discover(boost::thread_group& threadGroup)
 #endif
 }
 
-// return true and url of the release folder if new update is available
-// return false if error or update is not available
-static bool IsUpdateAvailable(CUrl& redirect)
-{
-    DebugPrintf("%s: starting\n", __func__);
-
-    string urlRelease = GetArg("-checkforupdateurl", GITHUB_RELEASE_URL);
-
-    string error;
-    if (!CURLGetRedirect(urlRelease, redirect, error)) {
-        DebugPrintf("%s: error - %s\n", __func__, error);
-        if (urlRelease == GITHUB_RELEASE_URL) {
-            boost::algorithm::replace_all(urlRelease, "zenon", "zenon");
-            if (!CURLGetRedirect(urlRelease, redirect, error)) {
-                DebugPrintf("%s: error - %s\n", __func__, error);
-                return false;
-            }
-        } else
-            return false;
-    }
-
-    const string ver = strprintf("v%s-alpha", FormatVersion(CLIENT_VERSION));
-    DebugPrintf("%s: redirect is %s, version is %s\n", __func__, redirect, ver);
-
-    
-    if (redirect.find(ver) == string::npos) {
-        LogPrintf("New version is available, please update your wallet! Go to: %s\n", redirect);
-        return true;
-    }
-    else
-        return false;
-}
-
-static bool ThreadCheckForUpdates(CContext& context)
-{
-    static bool bFirstRun = true;
-    if (bFirstRun) {
-        MilliSleep(60 * 1000); // wait 1 min, give wallet time to start
-        bFirstRun = false;
-    }
-
-    CUrl urlRelease;
-    if (!IsUpdateAvailable(urlRelease)) {
-        context.GetAutoUpdateModel()->SetUpdateAvailable(false, "", "");
-        return true; // continue thread execution
-    }
-
-    CUrl urlInfo = strprintf("%s/%s", urlRelease, "update.info");
-    boost::algorithm::replace_first(urlInfo, "/tag/", "/download/");
-
-    string error;
-    CUrl urlInfoNew;
-    if (CURLGetRedirect(urlInfo, urlInfoNew, error))
-        urlInfo = urlInfoNew;
-
-    string info;
-    if (!CURLDownloadToMem(urlInfo, nullptr, info, error)) {
-        LogPrintf("%s: %s\n", __func__, error);
-        return true; // continue thread execution
-    }
-
-    string urlPath;
-    if (!FindUpdateUrlForThisPlatform(info, urlPath, error)) {
-        LogPrintf("%s: %s\n", __func__, error);
-        return true; // continue thread execution
-    } else {
-        context.GetAutoUpdateModel()->SetUpdateAvailable(true, urlRelease, urlPath);
-        uiInterface.NotifyUpdateAvailable();
-
-        DebugPrintf("%s: update found, exit thread.\n", __func__);
-        return false;
-    }
-}
-
 void StartNode(boost::thread_group& threadGroup, CScheduler& scheduler)
 {
     //uiInterface.InitMessage(_("Loading addresses..."));
@@ -1860,13 +1781,6 @@ void StartNode(boost::thread_group& threadGroup, CScheduler& scheduler)
     if (GetBoolArg("-staking", true) && pwalletMain)
         threadGroup.create_thread(boost::bind(&TraceThread<void (*)()>, "stakemint", &ThreadStakeMinter));
 #endif // ENABLE_WALLET
-
-    // Check for updates once per day
-    int64_t nCheckForUpdatesInterval = 1000 * GetArg("-checkforupdate", 60 * 60 * 24);
-    if (nCheckForUpdatesInterval > 0) {
-        threadGroup.create_thread(boost::bind(&LoopForever<bool (*)()>, "checkforupdates",
-            [](){ return ThreadCheckForUpdates(GetContext()); }, nCheckForUpdatesInterval));
-    }
 }
 
 bool StopNode()

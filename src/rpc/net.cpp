@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2015-2019 The PIVX developers
 // Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -14,7 +14,7 @@
 #include "protocol.h"
 #include "sync.h"
 #include "timedata.h"
-#include "ui_interface.h"
+#include "guiinterface.h"
 #include "util.h"
 #include "version.h"
 
@@ -183,7 +183,7 @@ UniValue addnode(const UniValue& params, bool fHelp)
             "2. \"command\"  (string, required) 'add' to add a node to the list, 'remove' to remove a node from the list, 'onetry' to try a connection to the node once\n"
 
             "\nExamples:\n" +
-            HelpExampleCli("addnode", "\"192.168.0.6:25992\" \"onetry\"") + HelpExampleRpc("addnode", "\"192.168.0.6:25992\", \"onetry\""));
+            HelpExampleCli("addnode", "\"192.168.0.6:35993\" \"onetry\"") + HelpExampleRpc("addnode", "\"192.168.0.6:35993\", \"onetry\""));
 
     string strNode = params[0].get_str();
 
@@ -257,7 +257,7 @@ UniValue getaddednodeinfo(const UniValue& params, bool fHelp)
             "    \"connected\" : true|false,          (boolean) If connected\n"
             "    \"addresses\" : [\n"
             "       {\n"
-            "         \"address\" : \"192.168.0.201:25992\",  (string) The Zenon server host and port\n"
+            "         \"address\" : \"192.168.0.201:35993\",  (string) The Zenon server host and port\n"
             "         \"connected\" : \"outbound\"           (string) connection, inbound or outbound\n"
             "       }\n"
             "       ,...\n"
@@ -439,7 +439,7 @@ UniValue getnetworkinfo(const UniValue& params, bool fHelp)
     UniValue localAddresses(UniValue::VARR);
     {
         LOCK(cs_mapLocalHost);
-        for (const PAIRTYPE(CNetAddr, LocalServiceInfo) & item : mapLocalHost) {
+        for (const std::pair<const CNetAddr, LocalServiceInfo> &item : mapLocalHost) {
             UniValue rec(UniValue::VOBJ);
             rec.push_back(Pair("address", item.first.ToString()));
             rec.push_back(Pair("port", item.second.nPort));

@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2017 The PIVX developers
+// Copyright (c) 2015-2019 The PIVX developers
 // Copyright (c) 2017 The Zenon developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -14,7 +14,7 @@
 
 #include "base58.h"
 #include "init.h"
-#include "wallet.h"
+#include "wallet/wallet.h"
 #include "askpassphrasedialog.h"
 
 #include <string>
@@ -106,7 +106,6 @@ void SignVerifyMessageDialog::on_signMessageButton_SM_clicked()
 
     CBitcoinAddress addr(ui->addressIn_SM->text().toStdString());
     if (!addr.IsValid()) {
-
         ui->statusLabel_SM->setStyleSheet("QLabel { color: #F41954; }");
         ui->statusLabel_SM->setText(tr("The entered address is invalid.") + QString(" ") + tr("Please check the address and try again."));
         return;
@@ -180,7 +179,6 @@ void SignVerifyMessageDialog::on_verifyMessageButton_VM_clicked()
 {
     CBitcoinAddress addr(ui->addressIn_VM->text().toStdString());
     if (!addr.IsValid()) {
-
         ui->statusLabel_VM->setStyleSheet("QLabel { color: #F41954; }");
         ui->statusLabel_VM->setText(tr("The entered address is invalid.") + QString(" ") + tr("Please check the address and try again."));
         return;

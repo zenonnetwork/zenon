@@ -2,7 +2,7 @@
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-DIST_SUBDIRS = secp256k1 univalue minizip
+DIST_SUBDIRS = secp256k1 univalue
 
 AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS) $(HARDENED_LDFLAGS) $(GPROF_LDFLAGS) $(SANITIZER_LDFLAGS)
 AM_CXXFLAGS = $(DEBUG_CXXFLAGS) $(HARDENED_CXXFLAGS) $(WARN_CXXFLAGS) $(NOWARN_CXXFLAGS) $(ERROR_CXXFLAGS) $(GPROF_CXXFLAGS) $(SANITIZER_CXXFLAGS)
@@ -19,17 +19,9 @@ else
 LIBUNIVALUE = $(UNIVALUE_LIBS)
 endif
 
-LIBMINIZIP = minizip/libminizip.la
-
-$(LIBMINIZIP):
-	@echo "Building minizip ..." && $(MAKE) -C $(@D) $(@F) CXX="$(CXX)" \
-	  CC="$(CC)" PLATFORM=$(TARGET_OS) AR="$(AR)" \
-		  OPT="$(AM_CXXFLAGS) $(PIE_FLAGS) $(CXXFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS)"
-
 BITCOIN_INCLUDES=-I$(builddir) $(BDB_CPPFLAGS) $(BOOST_CPPFLAGS) $(LEVELDB_CPPFLAGS) $(CRYPTO_CFLAGS) $(SSL_CFLAGS)
 
 BITCOIN_INCLUDES += -I$(srcdir)/secp256k1/include
-BITCOIN_INCLUDES += -I$(srcdir)/minizip
 BITCOIN_INCLUDES += $(UNIVALUE_CFLAGS)
 
 LIBBITCOIN_SERVER=libbitcoin_server.a
@@ -85,15 +77,10 @@ endif
 # Zenon core #
 BITCOIN_CORE_H = \
   activemasternode.h \
-  accumulators.h \
-  accumulatorcheckpoints.h \
-  accumulatorcheckpoints.json.h \
-  accumulatormap.h \
   addrman.h \
   alert.h \
   allocators.h \
   amount.h \
-  autoupdatemodel.h \
   base58.h \
   bip38.h \
   bloom.h \
@@ -112,18 +99,14 @@ BITCOIN_CORE_H = \
   compat/endian.h \
   compat/sanity.h \
   compressor.h \
-  context.h \
   primitives/block.h \
-  primitives/deterministicmint.h \
   primitives/transaction.h \
-  primitives/zerocoin.h \
   core_io.h \
   crypter.h \
-  curl.h \
   denomination_functions.h \
   obfuscation.h \
   obfuscation-relay.h \
-  db.h \
+  wallet/db.h \
   hash.h \
   httprpc.h \
   httpserver.h \
@@ -146,7 +129,6 @@ BITCOIN_CORE_H = \
   masternodeconfig.h \
   merkleblock.h \
   miner.h \
-  mintpool.h \
   mruset.h \
   netbase.h \
   net.h \
@@ -180,7 +162,7 @@ BITCOIN_CORE_H = \
   torcontrol.h \
   txdb.h \
   txmempool.h \
-  ui_interface.h \
+  guiinterface.h \
   uint256.h \
   undo.h \
   util.h \
@@ -189,14 +171,21 @@ BITCOIN_CORE_H = \
   utiltime.h \
   validationinterface.h \
   version.h \
-  wallet.h \
-  wallet_ismine.h \
-  walletdb.h \
-  ziputil.h \
-  finally.h \
+  wallet/wallet.h \
+  wallet/wallet_ismine.h \
+  wallet/walletdb.h \
   zznnchain.h \
-  zznntracker.h \
-  zznnwallet.h \
+  zznn/accumulators.h \
+  zznn/accumulatorcheckpoints.h \
+  zznn/accumulatorcheckpoints.json.h \
+  zznn/accumulatormap.h \
+  zznn/deterministicmint.h \
+  zznn/mintpool.h \
+  zznn/witness.h \
+  zznn/zerocoin.h \
+  zznn/zznntracker.h \
+  zznn/zznnwallet.h \
+  zznn/zznnmodule.h \
   genwit.h \
   concurrentqueue.h \
   lightzznnthread.h \
@@ -269,7 +258,7 @@ libbitcoin_wallet_a_SOURCES = \
   denomination_functions.cpp \
   obfuscation.cpp \
   obfuscation-relay.cpp \
-  db.cpp \
+  wallet/db.cpp \
   crypter.cpp \
   swifttx.cpp \
   masternode.cpp \
@@ -278,19 +267,22 @@ libbitcoin_wallet_a_SOURCES = \
   masternode-sync.cpp \
   masternodeconfig.cpp \
   masternodeman.cpp \
-  mintpool.cpp \
-  rpcdump.cpp \
-  primitives/deterministicmint.cpp \
-  primitives/zerocoin.cpp \
-  rpcwallet.cpp \
+  wallet/rpcdump.cpp \
+  wallet/rpcwallet.cpp \
   kernel.cpp \
-  wallet.cpp \
-  wallet_ismine.cpp \
-  walletdb.cpp \
-  zznnwallet.cpp \
-  zznntracker.cpp \
+  wallet/wallet.cpp \
+  wallet/wallet_ismine.cpp \
+  wallet/walletdb.cpp \
+  zznn/deterministicmint.cpp \
+  zznn/zerocoin.cpp \
+  zznn/accumulators.cpp \
+  zznn/mintpool.cpp \
+  zznn/witness.cpp \
+  zznn/zznnwallet.cpp \
+  zznn/zznntracker.cpp \
   stakeinput.cpp \
   genwit.cpp \
+  zznn/zznnmodule.cpp \
   lightzznnthread.cpp \
   $(BITCOIN_CORE_H)
 
@@ -309,14 +301,9 @@ crypto_libbitcoin_crypto_a_SOURCES = \
   crypto/aes_helper.c \
   crypto/blake.c \
   crypto/bmw.c \
-  crypto/cubehash.c \
-  crypto/echo.c \
   crypto/groestl.c \
   crypto/jh.c \
   crypto/keccak.c \
-  crypto/luffa.c \
-  crypto/shavite.c \
-  crypto/simd.c \
   crypto/skein.c \
   crypto/common.h \
   crypto/sha256.h \
@@ -329,14 +316,9 @@ crypto_libbitcoin_crypto_a_SOURCES = \
   crypto/ripemd160.h \
   crypto/sph_blake.h \
   crypto/sph_bmw.h \
-  crypto/sph_cubehash.h \
-  crypto/sph_echo.h \
   crypto/sph_groestl.h \
   crypto/sph_jh.h \
   crypto/sph_keccak.h \
-  crypto/sph_luffa.h \
-  crypto/sph_shavite.h \
-  crypto/sph_simd.h \
   crypto/sph_skein.h \
   crypto/sph_types.h
 
@@ -356,6 +338,7 @@ libzerocoin_libbitcoin_zerocoin_a_SOURCES = \
   libzerocoin/SerialNumberSignatureOfKnowledge.h \
   libzerocoin/SpendType.h \
   libzerocoin/ZerocoinDefines.h \
+  libzerocoin/bignum.cpp \
   libzerocoin/Accumulator.cpp \
   libzerocoin/AccumulatorProofOfKnowledge.cpp \
   libzerocoin/Coin.cpp \
@@ -365,14 +348,20 @@ libzerocoin_libbitcoin_zerocoin_a_SOURCES = \
   libzerocoin/ParamGeneration.cpp \
   libzerocoin/Params.cpp \
   libzerocoin/SerialNumberSignatureOfKnowledge.cpp
+if USE_NUM_GMP
+  libzerocoin_libbitcoin_zerocoin_a_SOURCES += libzerocoin/bignum_gmp.cpp
+endif
+if USE_NUM_OPENSSL
+  libzerocoin_libbitcoin_zerocoin_a_SOURCES += libzerocoin/bignum_openssl.cpp
+endif
 
 # common: shared between Zenond, and Zenon-qt and non-server tools
 libbitcoin_common_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
 libbitcoin_common_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_common_a_SOURCES = \
-  accumulators.cpp \
-  accumulatorcheckpoints.cpp \
-  accumulatormap.cpp \
+  zznn/accumulators.cpp \
+  zznn/accumulatorcheckpoints.cpp \
+  zznn/accumulatormap.cpp \
   allocators.cpp \
   amount.cpp \
   base58.cpp \
@@ -381,9 +370,9 @@ libbitcoin_common_a_SOURCES = \
   coins.cpp \
   compressor.cpp \
   primitives/block.cpp \
-  primitives/deterministicmint.cpp \
+  zznn/deterministicmint.cpp \
   primitives/transaction.cpp \
-  primitives/zerocoin.cpp \
+  zznn/zerocoin.cpp \
   core_read.cpp \
   core_write.cpp \
   hash.cpp \
@@ -410,11 +399,8 @@ libbitcoin_util_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
 libbitcoin_util_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_util_a_SOURCES = \
   allocators.cpp \
-  autoupdatemodel.cpp \
   chainparamsbase.cpp \
   clientversion.cpp \
-  context.cpp \
-  curl.cpp \
   compat/glibc_sanity.cpp \
   compat/glibcxx_sanity.cpp \
   compat/strnlen.cpp \
@@ -427,7 +413,6 @@ libbitcoin_util_a_SOURCES = \
   utilmoneystr.cpp \
   utilstrencodings.cpp \
   utiltime.cpp \
-  ziputil.cpp \
   $(BITCOIN_CORE_H)
 
 if GLIBC_BACK_COMPAT
@@ -466,8 +451,7 @@ Zenond_LDADD = \
   $(LIBLEVELDB) \
   $(LIBLEVELDB_SSE42) \
   $(LIBMEMENV) \
-  $(LIBSECP256K1) \
-  $(LIBMINIZIP)
+  $(LIBSECP256K1)
 
 Zenond_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS) $(CURL_LIBS)
 
@@ -487,7 +471,7 @@ Zenon_cli_LDADD = \
   $(LIBBITCOIN_UTIL) \
   $(LIBBITCOIN_CRYPTO)
 
-Zenon_cli_LDADD += $(BOOST_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(EVENT_LIBS) $(CURL_LIBS)
+Zenon_cli_LDADD += $(BOOST_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(EVENT_LIBS)
 #
 
 # Zenon-tx binary #
@@ -508,7 +492,7 @@ Zenon_tx_LDADD = \
   $(LIBBITCOIN_CRYPTO) \
   $(LIBSECP256K1)
 
-Zenon_tx_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS) $(CURL_LIBS)
+Zenon_tx_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS)
 #
 
 # bitcoinconsensus library #
@@ -548,10 +532,16 @@ CLEANFILES = $(EXTRA_LIBRARIES)
 CLEANFILES += *.gcda *.gcno
 CLEANFILES += compat/*.gcda compat/*.gcno
 CLEANFILES += crypto/*.gcda crypto/*.gcno
+CLEANFILES += libzerocoin/*.gcda libzerocoin/*.gcno
 CLEANFILES += primitives/*.gcda primitives/*.gcno
+CLEANFILES += rpc/*.gcda rpc/*.gcno
 CLEANFILES += script/*.gcda script/*.gcno
+CLEANFILES += support/*.gcda support/*.gcno
 CLEANFILES += univalue/*.gcda univalue/*.gcno
+CLEANFILES += wallet/*.gcda wallet/*.gcno
+CLEANFILES += wallet/test/*.gcda wallet/test/*.gcno
 CLEANFILES += zmq/*.gcda zmq/*.gcno
+CLEANFILES += zznn/*.gcda zznn/*.gcno
 CLEANFILES += obj/build.h
 
 EXTRA_DIST =
@@ -567,7 +557,6 @@ $(top_srcdir)/$(subdir)/config/Zenon-config.h.in:  $(am__configure_deps)
 clean-local:
 	-$(MAKE) -C secp256k1 clean
 	-$(MAKE) -C univalue clean
-	-$(MAKE) -C minizip clean
 	-rm -f leveldb/*/*.gcda leveldb/*/*.gcno leveldb/helpers/memenv/*.gcda leveldb/helpers/memenv/*.gcno
 	-rm -f config.h
 	-rm -rf test/__pycache__

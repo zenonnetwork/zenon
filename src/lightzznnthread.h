@@ -1,5 +1,4 @@
-//
-// Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2015-2019 The PIVX developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 //
@@ -9,7 +8,7 @@
 
 #include <atomic>
 #include "genwit.h"
-#include "accumulators.h"
+#include "zznn/accumulators.h"
 #include "concurrentqueue.h"
 #include "chainparams.h"
 #include <boost/function.hpp>

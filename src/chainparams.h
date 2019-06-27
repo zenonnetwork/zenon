@@ -1,7 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2015-2019 The PIVX developers
 // Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -91,6 +91,11 @@ public:
     const std::vector<CAddress>& FixedSeeds() const { return vFixedSeeds; }
     virtual const Checkpoints::CCheckpointData& Checkpoints() const = 0;
     int PoolMaxTransactions() const { return nPoolMaxTransactions; }
+    /** Return the number of blocks in a budget cycle */
+    int GetBudgetCycleBlocks() const { return nBudgetCycleBlocks; }
+    int64_t GetProposalEstablishmentTime() const { return nProposalEstablishmentTime; }
+
+    /** Spork key and Masternode Handling **/
     std::string SporkKey() const { return strSporkKey; }
     std::string ObfuscationPoolDummyAddress() const { return strObfuscationPoolDummyAddress; }
     int64_t StartMasternodePayments() const { return nStartMasternodePayments; }
@@ -102,6 +107,7 @@ public:
     std::string Zerocoin_Modulus() const { return zerocoinModulus; }
     libzerocoin::ZerocoinParams* Zerocoin_Params(bool useModulusV1) const;
     int Zerocoin_MaxSpendsPerTransaction() const { return nMaxZerocoinSpendsPerTransaction; }
+    int Zerocoin_MaxPublicSpendsPerTransaction() const { return nMaxZerocoinPublicSpendsPerTransaction; }
     CAmount Zerocoin_MintFee() const { return nMinZerocoinMintFee; }
     int Zerocoin_MintRequiredConfirmations() const { return nMintRequiredConfirmations; }
     int Zerocoin_RequiredAccumulation() const { return nRequiredAccumulation; }
@@ -123,9 +129,13 @@ public:
 
     // fake serial attack
     int Zerocoin_Block_EndFakeSerial() const { return nFakeSerialBlockheightEnd; }
+    CAmount GetSupplyBeforeFakeSerial() const { return nSupplyBeforeFakeSerial; }
 
+    int Zerocoin_Block_Double_Accumulated() const { return nBlockDoubleAccumulated; }
     CAmount InvalidAmountFiltered() const { return nInvalidAmountFiltered; };
-    
+
+    int Zerocoin_Block_Public_Spend_Enabled() const { return nPublicZCSpends; }
+
 protected:
     CChainParams() {}
 
@@ -163,11 +173,16 @@ protected:
     bool fTestnetToBeDeprecatedFieldRPC;
     bool fHeadersFirstSyncingActive;
     int nPoolMaxTransactions;
+    int nBudgetCycleBlocks;
     std::string strSporkKey;
+    std::string strSporkKeyOld;
+    int64_t nEnforceNewSporkKey;
+    int64_t nRejectOldSporkKey;
     std::string strObfuscationPoolDummyAddress;
     int64_t nStartMasternodePayments;
     std::string zerocoinModulus;
     int nMaxZerocoinSpendsPerTransaction;
+    int nMaxZerocoinPublicSpendsPerTransaction;
     CAmount nMinZerocoinMintFee;
     CAmount nInvalidAmountFiltered;
     int nMintRequiredConfirmations;
@@ -178,6 +193,7 @@ protected:
     int nZerocoinStartHeight;
     int nZerocoinStartTime;
     int nZerocoinRequiredStakeDepth;
+    int64_t nProposalEstablishmentTime;
 
     int nBlockEnforceSerialRange;
     int nBlockRecalculateAccumulators;
@@ -185,9 +201,12 @@ protected:
     int nBlockLastGoodCheckpoint;
     int nBlockEnforceInvalidUTXO;
     int nBlockZerocoinV2;
-    
+    int nBlockDoubleAccumulated;
+    int nPublicZCSpends;
+
     // fake serial attack
     int nFakeSerialBlockheightEnd = 0;
+    CAmount nSupplyBeforeFakeSerial = 0;
 };
 
 /**
@@ -216,9 +235,6 @@ public:
  */
 const CChainParams& Params();
 
-/** Return whether network params are selected or not. */
-bool ParamsSelected();
-
 /** Return parameters for the given network. */
 CChainParams& Params(CBaseChainParams::Network network);
 
@@ -233,22 +249,5 @@ void SelectParams(CBaseChainParams::Network network);
  * Returns false if an invalid combination is given.
  */
 bool SelectParamsFromCommandLine();
-
-/**
- * Return approximate blockchain size on disk, in Gb.
- * Minimum free space (in bytes) needed for data directory.
- */
-uint64_t GetBlockChainSize();
-
-/**
- * @brief Check if genesis block in the given datadir has correct hash.
- *        Compare first block from blk0000.dat in the given datadir against genesisHash.
- *
- * @param datadir full path to the data directory
- * @param genesisHash hash of the genesis block
- * @param err description of the problem
- * @return true - ok, false - failed
- */
-bool VerifyGenesisBlock(const std::string& datadir, const uint256& genesisHash, std::string& err);
 
 #endif // BITCOIN_CHAINPARAMS_H

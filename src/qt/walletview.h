@@ -1,5 +1,5 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
-// Copyright (c) 2017-2018 The PIVX developers
+// Copyright (c) 2017-2019 The PIVX developers
 // Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -12,7 +12,7 @@
 #include "masternodelist.h"
 
 #include <QStackedWidget>
-#include <ui_interface.h>
+#include <guiinterface.h>
 
 class BitcoinGUI;
 class ClientModel;
@@ -24,7 +24,6 @@ class SendCoinsRecipient;
 class TransactionView;
 class WalletModel;
 class BlockExplorer;
-
 
 QT_BEGIN_NAMESPACE
 class QLabel;
@@ -106,6 +105,7 @@ public slots:
     void gotoBip38Tool();
 
     /** Show incoming transaction notification for new transactions.
+
         The new items are those between start and end inclusive, under the given parent item.
     */
     void processNewTransaction(const QModelIndex& parent, int start, int /*end*/);

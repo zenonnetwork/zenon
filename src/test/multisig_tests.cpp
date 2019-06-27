@@ -10,9 +10,10 @@
 #include "script/interpreter.h"
 #include "script/sign.h"
 #include "uint256.h"
+#include "test_Zenon.h"
 
 #ifdef ENABLE_WALLET
-#include "wallet_ismine.h"
+#include "wallet/wallet_ismine.h"
 #endif
 
 #include <boost/assign/std/vector.hpp>
@@ -23,7 +24,7 @@ using namespace boost::assign;
 
 typedef vector<unsigned char> valtype;
 
-BOOST_AUTO_TEST_SUITE(multisig_tests)
+BOOST_FIXTURE_TEST_SUITE(multisig_tests, TestingSetup)
 
 CScript
 sign_multisig(CScript scriptPubKey, vector<CKey> keys, CTransaction transaction, int whichIn)

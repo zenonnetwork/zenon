@@ -1,5 +1,5 @@
 // Copyright (c) 2011-2015 The Bitcoin developers
-// Copyright (c) 2016-2018 The PIVX developers
+// Copyright (c) 2016-2019 The PIVX developers
 // Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -25,7 +25,7 @@
 #include "transactionview.h"
 #include "walletmodel.h"
 
-#include "ui_interface.h"
+#include "guiinterface.h"
 
 #include <QAction>
 #include <QActionGroup>

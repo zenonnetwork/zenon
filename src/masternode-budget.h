@@ -1,5 +1,5 @@
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2015-2019 The PIVX developers
 // Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -49,9 +49,6 @@ extern std::vector<CFinalizedBudgetBroadcast> vecImmatureFinalizedBudgets;
 
 extern CBudgetManager budget;
 void DumpBudgets();
-
-// Define amount of blocks in budget payment cycle
-int GetBudgetPaymentCycleBlocks();
 
 //Check the collateral transaction for the budget proposal/finalized budget
 bool IsBudgetCollateralValid(uint256 nTxCollateralHash, uint256 nExpectedHash, std::string& strError, int64_t& nTime, int& nConf, bool fBudgetFinalization=false);
@@ -496,14 +493,8 @@ public:
 
     bool IsValid(std::string& strError, bool fCheckCollateral = true);
 
-    bool IsEstablished()
-    {
-        // Proposals must be at least a day old to make it into a budget
-        if (Params().NetworkID() == CBaseChainParams::MAIN) return (nTime < GetTime() - (60 * 60 * 24));
-
-        // For testing purposes - 5 minutes
-        return (nTime < GetTime() - (60 * 5));
-    }
+    bool IsEstablished();
+    bool IsPassing(const CBlockIndex* pindexPrev, int nBlockStartBudget, int nBlockEndBudget, int mnCount);
 
     std::string GetName() { return strProposalName; }
     std::string GetURL() { return strURL; }

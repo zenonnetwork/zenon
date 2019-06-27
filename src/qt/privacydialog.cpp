@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 The PIVX developers
+// Copyright (c) 2017-2019 The PIVX developers
 // Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -23,8 +23,8 @@
 #include <QSettings>
 #include <utilmoneystr.h>
 #include <QtWidgets>
-#include <primitives/deterministicmint.h>
-#include <accumulators.h>
+#include <zznn/deterministicmint.h>
+#include <zznn/accumulators.h>
 
 PrivacyDialog::PrivacyDialog(QWidget* parent) : QDialog(parent, Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint | Qt::WindowCloseButtonHint),
                                                           ui(new Ui::PrivacyDialog),
@@ -51,6 +51,7 @@ PrivacyDialog::PrivacyDialog(QWidget* parent) : QDialog(parent, Qt::WindowSystem
     ui->TEMintStatus->setPlainText(tr("Mint Status: Okay"));
 
     // Coin Control signals
+    /*                                                                            [disable MINT and coinControl]
     connect(ui->pushButtonCoinControl, SIGNAL(clicked()), this, SLOT(coinControlButtonClicked()));
 
     // Coin Control: clipboard actions
@@ -60,6 +61,7 @@ PrivacyDialog::PrivacyDialog(QWidget* parent) : QDialog(parent, Qt::WindowSystem
     connect(clipboardAmountAction, SIGNAL(triggered()), this, SLOT(coinControlClipboardAmount()));
     ui->labelCoinControlQuantity->addAction(clipboardQuantityAction);
     ui->labelCoinControlAmount->addAction(clipboardAmountAction);
+    */
 
     // Denomination labels
     ui->labelzDenom1Text->setText(tr("Denom. with value <b>1</b>:"));
@@ -86,14 +88,6 @@ PrivacyDialog::PrivacyDialog(QWidget* parent) : QDialog(parent, Qt::WindowSystem
 
     // Zenon settings
     QSettings settings;
-    if (!settings.contains("nSecurityLevel")){
-        nSecurityLevel = 42;
-        settings.setValue("nSecurityLevel", nSecurityLevel);
-    }
-    else{
-        nSecurityLevel = settings.value("nSecurityLevel").toInt();
-    }
-
     if (!settings.contains("fMinimizeChange")){
         fMinimizeChange = false;
         settings.setValue("fMinimizeChange", fMinimizeChange);
@@ -118,6 +112,8 @@ PrivacyDialog::PrivacyDialog(QWidget* parent) : QDialog(parent, Qt::WindowSystem
     if(!settings.contains("fDenomsSectionMinimized"))
         settings.setValue("fDenomsSectionMinimized", true);
     minimizeDenomsSection(settings.value("fDenomsSectionMinimized").toBool());
+
+    ui->checkBoxMintChange->setVisible(false);
 }
 
 PrivacyDialog::~PrivacyDialog()
@@ -141,7 +137,6 @@ void PrivacyDialog::setModel(WalletModel* walletModel)
                                SLOT(setBalance(CAmount, CAmount, CAmount, CAmount, CAmount, CAmount, CAmount, CAmount, CAmount)));
         connect(walletModel->getOptionsModel(), SIGNAL(zeromintEnableChanged(bool)), this, SLOT(updateAutomintStatus()));
         connect(walletModel->getOptionsModel(), SIGNAL(zeromintPercentageChanged(int)), this, SLOT(updateAutomintStatus()));
-        ui->securityLevel->setValue(nSecurityLevel);
     }
 }
 
@@ -163,7 +158,8 @@ void PrivacyDialog::on_addressBookButton_clicked()
         ui->zZNNpayAmount->setFocus();
     }
 }
-
+/* disable MINT
+ *
 void PrivacyDialog::on_pushButtonMintzZNN_clicked()
 {
     if (!walletModel || !walletModel->getOptionsModel())
@@ -244,7 +240,7 @@ void PrivacyDialog::on_pushButtonMintzZNN_clicked()
 
     return;
 }
-
+*/
 void PrivacyDialog::on_pushButtonMintReset_clicked()
 {
     ui->TEMintStatus->setPlainText(tr("Starting ResetMintZerocoin: rescanning complete blockchain, this will need up to 30 minutes depending on your hardware.\nPlease be patient..."));
@@ -381,10 +377,6 @@ void PrivacyDialog::sendzZNN()
         }
     }
 
-    // Persist Security Level for next start
-    nSecurityLevel = ui->securityLevel->value();
-    settings.setValue("nSecurityLevel", nSecurityLevel);
-
     // Spend confirmation message box
 
     // Add address info if available
@@ -403,8 +395,7 @@ void PrivacyDialog::sendzZNN()
         strAddress = tr(" to a newly generated (unused and therefore anonymous) local address <br />");
     }
 
-    QString strSecurityLevel = tr("with Security Level ") + ui->securityLevel->text() + " ?";
-    strQuestionString += strAmount + strAddress + strSecurityLevel;
+    strQuestionString += strAmount + strAddress;
 
     // Display message box
     QMessageBox::StandardButton retval = QMessageBox::question(this, tr("Confirm send coins"),
@@ -428,15 +419,6 @@ void PrivacyDialog::sendzZNN()
         vMintsToFetch = ZZnnControlDialog::GetSelectedMints();
 
         for (auto& meta : vMintsToFetch) {
-            if (meta.nVersion < libzerocoin::PrivateCoin::PUBKEY_VERSION) {
-                //version 1 coins have to use full security level to successfully spend.
-                if (nSecurityLevel < 100) {
-                    QMessageBox::warning(this, tr("Spend Zerocoin"), tr("Version 1 zZNN require a security level of 100 to successfully spend."), QMessageBox::Ok, QMessageBox::Ok);
-                    ui->TEMintStatus->setPlainText(tr("Failed to spend zZNN"));
-                    ui->TEMintStatus->repaint();
-                    return;
-                }
-            }
             CZerocoinMint mint;
             if (!pwalletMain->GetMint(meta.hashSerial, mint)) {
                 ui->TEMintStatus->setPlainText(tr("Failed to fetch mint associated with serial hash"));
@@ -453,22 +435,16 @@ void PrivacyDialog::sendzZNN()
     bool fSuccess = false;
     if(ui->payTo->text().isEmpty()){
         // Spend to newly generated local address
-        fSuccess = pwalletMain->SpendZerocoin(nAmount, nSecurityLevel, wtxNew, receipt, vMintsSelected, fMintChange, fMinimizeChange);
+        fSuccess = pwalletMain->SpendZerocoin(nAmount, wtxNew, receipt, vMintsSelected, fMintChange, fMinimizeChange);
     }
     else {
         // Spend to supplied destination address
-        fSuccess = pwalletMain->SpendZerocoin(nAmount, nSecurityLevel, wtxNew, receipt, vMintsSelected, fMintChange, fMinimizeChange, &address);
+        fSuccess = pwalletMain->SpendZerocoin(nAmount, wtxNew, receipt, vMintsSelected, fMintChange, fMinimizeChange, &address);
     }
 
     // Display errors during spend
     if (!fSuccess) {
-        if (receipt.GetStatus() == ZZNN_SPEND_V1_SEC_LEVEL) {
-            QMessageBox::warning(this, tr("Spend Zerocoin"), tr("Version 1 zZNN require a security level of 100 to successfully spend."), QMessageBox::Ok, QMessageBox::Ok);
-            ui->TEMintStatus->setPlainText(tr("Failed to spend zZNN"));
-            ui->TEMintStatus->repaint();
-            return;
-        }
-
+        /*
         int nNeededSpends = receipt.GetNeededSpends(); // Number of spends we would need for this transaction
         const int nMaxSpends = Params().Zerocoin_MaxSpendsPerTransaction(); // Maximum possible spends for one zZNN transaction
         if (nNeededSpends > nMaxSpends) {
@@ -478,9 +454,10 @@ void PrivacyDialog::sendzZNN()
             ui->TEMintStatus->setPlainText(tr("Spend Zerocoin failed with status = ") +QString::number(receipt.GetStatus(), 10) + "\n" + "Message: " + QString::fromStdString(strStatusMessage.toStdString()));
         }
         else {
-            QMessageBox::warning(this, tr("Spend Zerocoin"), receipt.GetStatusMessage().c_str(), QMessageBox::Ok, QMessageBox::Ok);
-            ui->TEMintStatus->setPlainText(tr("Spend Zerocoin failed with status = ") +QString::number(receipt.GetStatus(), 10) + "\n" + "Message: " + QString::fromStdString(receipt.GetStatusMessage()));
-        }
+         */
+        QMessageBox::warning(this, tr("Spend Zerocoin"), receipt.GetStatusMessage().c_str(), QMessageBox::Ok, QMessageBox::Ok);
+        ui->TEMintStatus->setPlainText(tr("Spend Zerocoin failed with status = ") +QString::number(receipt.GetStatus(), 10) + "\n" + "Message: " + QString::fromStdString(receipt.GetStatusMessage()));
+        //}
         ui->zZNNpayAmount->setFocus();
         ui->TEMintStatus->repaint();
         ui->TEMintStatus->verticalScrollBar()->setValue(ui->TEMintStatus->verticalScrollBar()->maximum()); // Automatically scroll to end of text
@@ -521,7 +498,7 @@ void PrivacyDialog::sendzZNN()
 
         strStats += tr("address: ");
         CTxDestination dest;
-        if(txout.scriptPubKey.IsZerocoinMint())
+        if(txout.IsZerocoinMint())
             strStats += tr("zZNN Mint");
         else if(ExtractDestination(txout.scriptPubKey, dest))
             strStats += tr(CBitcoinAddress(dest).ToString().c_str());
@@ -548,6 +525,8 @@ void PrivacyDialog::on_payTo_textChanged(const QString& address)
 {
     updateLabel(address);
 }
+
+/* DISABLE MINTs: no need for coinCointrol
 
 // Coin Control: copy label "Quantity" to clipboard
 void PrivacyDialog::coinControlClipboardQuantity()
@@ -590,7 +569,7 @@ void PrivacyDialog::coinControlUpdateLabels()
         ui->labelCoinControlAmount->setText (tr("Coins automatically selected"));
     }
 }
-
+*/
 
 void PrivacyDialog::on_pushButtonShowDenoms_clicked()
 {
@@ -736,7 +715,6 @@ void PrivacyDialog::setBalance(const CAmount& balance, const CAmount& unconfirme
     ui->labelzAvailableAmount->setText(QString::number(zerocoinBalance/COIN) + QString(" zZNN "));
     ui->labelzAvailableAmount_2->setText(QString::number(matureZerocoinBalance/COIN) + QString(" zZNN "));
     ui->labelzAvailableAmount_4->setText(QString::number(zerocoinBalance/COIN) + QString(" zZNN "));
-    ui->labelzZNNAmountValue->setText(BitcoinUnits::floorHtmlWithUnit(nDisplayUnit, balance - immatureBalance - nLockedBalance, false, BitcoinUnits::separatorAlways));
 
     // Display AutoMint status
     updateAutomintStatus();
@@ -828,20 +806,21 @@ void PrivacyDialog::updateAutomintStatus()
 void PrivacyDialog::updateSPORK16Status()
 {
     // Update/enable labels, buttons and tooltips depending on the current SPORK_16 status
-    bool fButtonsEnabled =  ui->pushButtonMintzZNN->isEnabled();
+    //bool fButtonsEnabled =  ui->pushButtonMintzZNN->isEnabled();
+    bool fButtonsEnabled = false;
     bool fMaintenanceMode = GetAdjustedTime() > GetSporkValue(SPORK_16_ZEROCOIN_MAINTENANCE_MODE);
     if (fMaintenanceMode && fButtonsEnabled) {
         // Mint zZNN
-        ui->pushButtonMintzZNN->setEnabled(false);
-        ui->pushButtonMintzZNN->setToolTip(tr("zZNN is currently disabled due to maintenance."));
+        //ui->pushButtonMintzZNN->setEnabled(false);
+        //ui->pushButtonMintzZNN->setToolTip(tr("zZNN is currently disabled due to maintenance."));
 
         // Spend zZNN
         ui->pushButtonSpendzZNN->setEnabled(false);
         ui->pushButtonSpendzZNN->setToolTip(tr("zZNN is currently disabled due to maintenance."));
     } else if (!fMaintenanceMode && !fButtonsEnabled) {
         // Mint zZNN
-        ui->pushButtonMintzZNN->setEnabled(true);
-        ui->pushButtonMintzZNN->setToolTip(tr("PrivacyDialog", "Enter an amount of ZNN to convert to zZNN", 0));
+        //ui->pushButtonMintzZNN->setEnabled(true);
+        //ui->pushButtonMintzZNN->setToolTip(tr("PrivacyDialog", "Enter an amount of ZNN to convert to zZNN", 0));
 
         // Spend zZNN
         ui->pushButtonSpendzZNN->setEnabled(true);

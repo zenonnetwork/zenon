@@ -1,7 +1,7 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
-// Copyright (c) 2015-2018 The PIVX developers
+// Copyright (c) 2015-2019 The PIVX developers
 // Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -15,9 +15,10 @@
 #include "txdb.h"
 #include "util.h"
 #include "utilmoneystr.h"
-#include "accumulatormap.h"
-#include "accumulators.h"
-#include "wallet.h"
+#include "zznn/accumulatormap.h"
+#include "zznn/accumulators.h"
+#include "wallet/wallet.h"
+#include "zznn/zznnmodule.h"
 #include "zznnchain.h"
 
 #include <stdint.h>
@@ -25,6 +26,7 @@
 #include <iostream>
 #include <univalue.h>
 #include <mutex>
+#include <numeric>
 #include <condition_variable>
 
 using namespace std;
@@ -136,10 +138,18 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
 
     result.push_back(Pair("modifier", strprintf("%016x", blockindex->nStakeModifier)));
 
+    result.push_back(Pair("moneysupply",ValueFromAmount(blockindex->nMoneySupply)));
+
+    UniValue zznnObj(UniValue::VOBJ);
+    for (auto denom : libzerocoin::zerocoinDenomList) {
+        zznnObj.push_back(Pair(to_string(denom), ValueFromAmount(blockindex->mapZerocoinSupply.at(denom) * (denom*COIN))));
+    }
+    zznnObj.push_back(Pair("total", ValueFromAmount(blockindex->GetZerocoinSupply())));
+    result.push_back(Pair("zZNNsupply", zznnObj));
+
     return result;
 }
 
-/*
 UniValue getchecksumblock(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() < 2 || params.size() > 3)
@@ -173,6 +183,18 @@ UniValue getchecksumblock(const UniValue& params, bool fHelp)
             "  \"previousblockhash\" : \"hash\",  (string) The hash of the previous block\n"
             "  \"nextblockhash\" : \"hash\"       (string) The hash of the next block\n"
             "  \"moneysupply\" : \"supply\"       (numeric) The money supply when this block was added to the blockchain\n"
+            "  \"zZNNsupply\" :\n"
+            "  {\n"
+            "     \"1\" : n,            (numeric) supply of 1 zZNN denomination\n"
+            "     \"5\" : n,            (numeric) supply of 5 zZNN denomination\n"
+            "     \"10\" : n,           (numeric) supply of 10 zZNN denomination\n"
+            "     \"50\" : n,           (numeric) supply of 50 zZNN denomination\n"
+            "     \"100\" : n,          (numeric) supply of 100 zZNN denomination\n"
+            "     \"500\" : n,          (numeric) supply of 500 zZNN denomination\n"
+            "     \"1000\" : n,         (numeric) supply of 1000 zZNN denomination\n"
+            "     \"5000\" : n,         (numeric) supply of 5000 zZNN denomination\n"
+            "     \"total\" : n,        (numeric) The total supply of all zZNN denominations\n"
+            "  }\n"
             "}\n"
 
             "\nResult (for verbose=false):\n"
@@ -212,7 +234,7 @@ UniValue getchecksumblock(const UniValue& params, bool fHelp)
 
     return blockToJSON(block, pblockindex);
 }
-*/
+
 
 UniValue getblockcount(const UniValue& params, bool fHelp)
 {
@@ -552,6 +574,18 @@ UniValue getblock(const UniValue& params, bool fHelp)
             "  \"previousblockhash\" : \"hash\",  (string) The hash of the previous block\n"
             "  \"nextblockhash\" : \"hash\"       (string) The hash of the next block\n"
             "  \"moneysupply\" : \"supply\"       (numeric) The money supply when this block was added to the blockchain\n"
+            "  \"zZNNsupply\" :\n"
+            "  {\n"
+            "     \"1\" : n,            (numeric) supply of 1 zZNN denomination\n"
+            "     \"5\" : n,            (numeric) supply of 5 zZNN denomination\n"
+            "     \"10\" : n,           (numeric) supply of 10 zZNN denomination\n"
+            "     \"50\" : n,           (numeric) supply of 50 zZNN denomination\n"
+            "     \"100\" : n,          (numeric) supply of 100 zZNN denomination\n"
+            "     \"500\" : n,          (numeric) supply of 500 zZNN denomination\n"
+            "     \"1000\" : n,         (numeric) supply of 1000 zZNN denomination\n"
+            "     \"5000\" : n,         (numeric) supply of 5000 zZNN denomination\n"
+            "     \"total\" : n,        (numeric) The total supply of all zZNN denominations\n"
+            "  }\n"
             "}\n"
 
             "\nResult (for verbose=false):\n"
@@ -996,66 +1030,22 @@ UniValue getfeeinfo(const UniValue& params, bool fHelp)
             "\nExamples:\n" +
             HelpExampleCli("getfeeinfo", "5") + HelpExampleRpc("getfeeinfo", "5"));
 
-    LOCK(cs_main);
-
     int nBlocks = params[0].get_int();
-    int nBestHeight = chainActive.Height();
+    int nBestHeight;
+    {
+        LOCK(cs_main);
+        nBestHeight = chainActive.Height();
+    }
     int nStartHeight = nBestHeight - nBlocks;
     if (nBlocks < 0 || nStartHeight <= 0)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "invalid start height");
 
-    CAmount nFees = 0;
-    int64_t nBytes = 0;
-    int64_t nTotal = 0;
-    for (int i = nStartHeight; i <= nBestHeight; i++) {
-        CBlockIndex* pindex = chainActive[i];
-        CBlock block;
-        if (!ReadBlockFromDisk(block, pindex))
-            throw JSONRPCError(RPC_DATABASE_ERROR, "failed to read block from disk");
+    UniValue newParams(UniValue::VARR);
+    newParams.push_back(UniValue(nStartHeight));
+    newParams.push_back(UniValue(nBlocks));
+    newParams.push_back(UniValue(true));    // fFeeOnly
 
-        CAmount nValueIn = 0;
-        CAmount nValueOut = 0;
-        for (const CTransaction& tx : block.vtx) {
-            if (tx.IsCoinBase() || tx.IsCoinStake())
-                continue;
-
-            for (unsigned int j = 0; j < tx.vin.size(); j++) {
-                if (tx.vin[j].scriptSig.IsZerocoinSpend()) {
-                    nValueIn += tx.vin[j].nSequence * COIN;
-                    continue;
-                }
-
-                COutPoint prevout = tx.vin[j].prevout;
-                CTransaction txPrev;
-                uint256 hashBlock;
-                if(!GetTransaction(prevout.hash, txPrev, hashBlock, true))
-                    throw JSONRPCError(RPC_DATABASE_ERROR, "failed to read tx from disk");
-                nValueIn += txPrev.vout[prevout.n].nValue;
-            }
-
-            for (unsigned int j = 0; j < tx.vout.size(); j++) {
-                nValueOut += tx.vout[j].nValue;
-            }
-
-            nFees += nValueIn - nValueOut;
-            nBytes += tx.GetSerializeSize(SER_NETWORK, CLIENT_VERSION);
-            nTotal++;
-        }
-
-        pindex = chainActive.Next(pindex);
-        if (!pindex)
-            break;
-    }
-
-    UniValue ret(UniValue::VOBJ);
-    CFeeRate nFeeRate = CFeeRate(nFees, nBytes);
-    ret.push_back(Pair("txcount", (int64_t)nTotal));
-    ret.push_back(Pair("txbytes", (int64_t)nBytes));
-    ret.push_back(Pair("ttlfee", FormatMoney(nFees)));
-    ret.push_back(Pair("feeperkb", FormatMoney(nFeeRate.GetFeePerK())));
-    ret.push_back(Pair("rec_highpriorityfee_perkb", FormatMoney(nFeeRate.GetFeePerK() + 1000)));
-
-    return ret;
+    return getblockindexstats(newParams, false);
 }
 
 UniValue mempoolInfoToJSON()
@@ -1161,3 +1151,508 @@ UniValue reconsiderblock(const UniValue& params, bool fHelp)
 
     return NullUniValue;
 }
+
+UniValue findserial(const UniValue& params, bool fHelp)
+{
+    if(fHelp || params.size() != 1)
+        throw runtime_error(
+            "findserial \"serial\"\n"
+            "\nSearches the zerocoin database for a zerocoin spend transaction that contains the specified serial\n"
+
+            "\nArguments:\n"
+            "1. serial   (string, required) the serial of a zerocoin spend to search for.\n"
+
+            "\nResult:\n"
+            "{\n"
+            "  \"success\": true|false        (boolean) Whether the serial was found\n"
+            "  \"txid\": \"xxx\"              (string) The transaction that contains the spent serial\n"
+            "}\n"
+
+            "\nExamples:\n" +
+            HelpExampleCli("findserial", "\"serial\"") + HelpExampleRpc("findserial", "\"serial\""));
+
+    std::string strSerial = params[0].get_str();
+    CBigNum bnSerial = 0;
+    bnSerial.SetHex(strSerial);
+    if (!bnSerial)
+	throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid serial");
+
+    uint256 txid = 0;
+    bool fSuccess = zerocoinDB->ReadCoinSpend(bnSerial, txid);
+
+    UniValue ret(UniValue::VOBJ);
+    ret.push_back(Pair("success", fSuccess));
+    ret.push_back(Pair("txid", txid.GetHex()));
+    return ret;
+}
+
+UniValue getaccumulatorvalues(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+            "getaccumulatorvalues \"height\"\n"
+                    "\nReturns the accumulator values associated with a block height\n"
+
+                    "\nArguments:\n"
+                    "1. height   (numeric, required) the height of the checkpoint.\n"
+
+                    "\nExamples:\n" +
+            HelpExampleCli("getaccumulatorvalues", "\"height\"") + HelpExampleRpc("getaccumulatorvalues", "\"height\""));
+
+    int nHeight = params[0].get_int();
+
+    CBlockIndex* pindex = chainActive[nHeight];
+    if (!pindex)
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "invalid block height");
+
+    UniValue ret(UniValue::VARR);
+    for (libzerocoin::CoinDenomination denom : libzerocoin::zerocoinDenomList) {
+        CBigNum bnValue;
+        if(!GetAccumulatorValueFromDB(pindex->nAccumulatorCheckpoint, denom, bnValue))
+            throw JSONRPCError(RPC_DATABASE_ERROR, "failed to find value in database");
+
+        UniValue obj(UniValue::VOBJ);
+        obj.push_back(Pair(std::to_string(denom), bnValue.GetHex()));
+        ret.push_back(obj);
+    }
+
+    return ret;
+}
+
+
+UniValue getaccumulatorwitness(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 2)
+        throw runtime_error(
+                "getaccumulatorwitness \"commitmentCoinValue, coinDenomination\"\n"
+                "\nReturns the accumulator witness value associated with the coin\n"
+
+                "\nArguments:\n"
+                "1. coinValue             (string, required) the commitment value of the coin in HEX.\n"
+                "2. coinDenomination      (numeric, required) the coin denomination.\n"
+
+                "\nResult:\n"
+                "{\n"
+                "  \"Accumulator Value\": \"xxx\"  (string) Accumulator hex value\n"
+                "  \"Denomination\": \"d\"         (integer) Accumulator denomination\n"
+                "  \"Mints added\": \"d\"          (integer) Number of mints added to the accumulator\n"
+                "  \"Witness Value\": \"xxx\"      (string) Witness hex value\n"
+                "}\n"
+
+                "\nExamples:\n" +
+                HelpExampleCli("getaccumulatorwitness", "\"5fb87fb7bb638e83bfc14bcf33ac6f8064c9884dc72a4e652666abcf42cc47f9da0a7aca58076b0122a19b25629a6b6e7461f188baa7c00865b862cdb270d934873648aa12dd66e3242da40e4c17c78b70fded35e2d9c72933b455fadce9684586b1d48b10570d66feebe51ccebb1d98595217d06f41e66d5a0d9246d46ec3dd\" 5") + HelpExampleRpc("getaccumulatorwitness", "\"5fb87fb7bb638e83bfc14bcf33ac6f8064c9884dc72a4e652666abcf42cc47f9da0a7aca58076b0122a19b25629a6b6e7461f188baa7c00865b862cdb270d934873648aa12dd66e3242da40e4c17c78b70fded35e2d9c72933b455fadce9684586b1d48b10570d66feebe51ccebb1d98595217d06f41e66d5a0d9246d46ec3dd\", 5"));
+
+
+    CBigNum coinValue;
+    coinValue.SetHex(params[0].get_str());
+
+    int d = params[1].get_int();
+    libzerocoin::CoinDenomination denomination = libzerocoin::IntToZerocoinDenomination(d);
+    libzerocoin::ZerocoinParams* zcparams = Params().Zerocoin_Params(false);
+
+    // Public coin
+    libzerocoin::PublicCoin pubCoin(zcparams, coinValue, denomination);
+
+    //Compute Accumulator and Witness
+    libzerocoin::Accumulator accumulator(zcparams, pubCoin.getDenomination());
+    libzerocoin::AccumulatorWitness witness(zcparams, accumulator, pubCoin);
+    string strFailReason = "";
+    int nMintsAdded = 0;
+    CZerocoinSpendReceipt receipt;
+
+    if (!GenerateAccumulatorWitness(pubCoin, accumulator, witness, nMintsAdded, strFailReason)) {
+        receipt.SetStatus(_(strFailReason.c_str()), ZZNN_FAILED_ACCUMULATOR_INITIALIZATION);
+        throw JSONRPCError(RPC_DATABASE_ERROR, receipt.GetStatusMessage());
+    }
+
+    UniValue obj(UniValue::VOBJ);
+    obj.push_back(Pair("Accumulator Value", accumulator.getValue().GetHex()));
+    obj.push_back(Pair("Denomination", accumulator.getDenomination()));
+    obj.push_back(Pair("Mints added",nMintsAdded));
+    obj.push_back(Pair("Witness Value", witness.getValue().GetHex()));
+
+    return obj;
+}
+
+void validaterange(const UniValue& params, int& heightStart, int& heightEnd, int minHeightStart)
+{
+    if (params.size() < 2) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Not enough parameters in validaterange");
+    }
+
+    int nBestHeight;
+    {
+        LOCK(cs_main);
+        nBestHeight = chainActive.Height();
+    }
+
+    heightStart = params[0].get_int();
+    if (heightStart > nBestHeight) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Invalid starting block (%d). Out of range.", heightStart));
+    }
+
+    const int range = params[1].get_int();
+    if (range < 1) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid block range. Must be strictly positive.");
+    }
+
+    heightEnd = heightStart + range - 1;
+
+    if (heightStart < minHeightStart && heightEnd >= minHeightStart) {
+        heightStart = minHeightStart;
+    }
+
+    if (heightEnd > nBestHeight) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Invalid ending block (%d). Out of range.", heightEnd));
+    }
+}
+
+UniValue getmintsinblocks(const UniValue& params, bool fHelp) {
+    if (fHelp || params.size() != 3)
+        throw runtime_error(
+                "getmintsinblocks height range coinDenomination\n"
+                "\nReturns the number of mints of a certain denomination"
+                "\noccurred in blocks [height, height+1, height+2, ..., height+range-1]\n"
+
+                "\nArguments:\n"
+                "1. height             (numeric, required) block height where the search starts.\n"
+                "2. range              (numeric, required) number of blocks to include.\n"
+                "3. coinDenomination   (numeric, required) coin denomination.\n"
+
+                "\nResult:\n"
+                "{\n"
+                "  \"Starting block\": \"x\"           (integer) First counted block\n"
+                "  \"Ending block\": \"x\"             (integer) Last counted block\n"
+                "  \"Number of d-denom mints\": \"x\"  (integer) number of mints of the required d denomination\n"
+                "}\n"
+
+                "\nExamples:\n" +
+                HelpExampleCli("getmintsinblocks", "1200000 1000 5") +
+                HelpExampleRpc("getmintsinblocks", "1200000, 1000, 5"));
+
+    int heightStart, heightEnd;
+    validaterange(params, heightStart, heightEnd, Params().Zerocoin_StartHeight());
+
+    int d = params[2].get_int();
+    libzerocoin::CoinDenomination denom = libzerocoin::IntToZerocoinDenomination(d);
+    if (denom == libzerocoin::CoinDenomination::ZQ_ERROR)
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid denomination. Must be in {1, 5, 10, 50, 100, 500, 1000, 5000}");
+
+    int num_of_mints = 0;
+    {
+        LOCK(cs_main);
+        CBlockIndex* pindex = chainActive[heightStart];
+
+        while (true) {
+            num_of_mints += count(pindex->vMintDenominationsInBlock.begin(), pindex->vMintDenominationsInBlock.end(), denom);
+            if (pindex->nHeight < heightEnd) {
+                pindex = chainActive.Next(pindex);
+            } else {
+                break;
+            }
+        }
+    }
+
+    UniValue obj(UniValue::VOBJ);
+    obj.push_back(Pair("Starting block", heightStart));
+    obj.push_back(Pair("Ending block", heightEnd-1));
+    obj.push_back(Pair("Number of "+ std::to_string(d) +"-denom mints", num_of_mints));
+
+    return obj;
+}
+
+
+UniValue getserials(const UniValue& params, bool fHelp) {
+    if (fHelp || params.size() < 2 || params.size() > 3)
+        throw runtime_error(
+            "getserials height range ( fVerbose )\n"
+            "\nLook the inputs of any tx in a range of blocks and returns the serial numbers for any coinspend.\n"
+
+            "\nArguments:\n"
+            "1. starting_height   (numeric, required) the height of the first block to check\n"
+            "2. range             (numeric, required) the amount of blocks to check\n"
+            "3. fVerbose          (boolean, optional, default=False) return verbose output\n"
+
+            "\nExamples:\n" +
+            HelpExampleCli("getserials", "1254000 1000") +
+            HelpExampleRpc("getserials", "1254000, 1000"));
+
+    int heightStart, heightEnd;
+    validaterange(params, heightStart, heightEnd, Params().Zerocoin_StartHeight());
+
+    bool fVerbose = false;
+    if (params.size() > 2) {
+        fVerbose = params[2].get_bool();
+    }
+
+    CBlockIndex* pblockindex = nullptr;
+    {
+        LOCK(cs_main);
+        pblockindex = chainActive[heightStart];
+    }
+
+    if (!pblockindex)
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "invalid block height");
+
+    UniValue serialsObj(UniValue::VOBJ);    // for fVerbose
+    UniValue serialsArr(UniValue::VARR);
+
+    while (true) {
+        CBlock block;
+        if (!ReadBlockFromDisk(block, pblockindex))
+                throw JSONRPCError(RPC_INTERNAL_ERROR, "Can't read block from disk");
+
+        // loop through each tx in the block
+        for (const CTransaction& tx : block.vtx) {
+            std::string txid = tx.GetHash().GetHex();
+            // collect the destination (first output) if fVerbose
+            std::string spentTo = "";
+            if (fVerbose) {
+                if (tx.vout[0].IsZerocoinMint()) {
+                    spentTo = "Zerocoin Mint";
+                } else if (tx.vout[0].IsEmpty()) {
+                    spentTo = "Zerocoin Stake";
+                } else {
+                    txnouttype type;
+                    vector<CTxDestination> addresses;
+                    int nRequired;
+                    if (!ExtractDestinations(tx.vout[0].scriptPubKey, type, addresses, nRequired)) {
+                        spentTo = strprintf("type: %d", GetTxnOutputType(type));
+                    } else {
+                        spentTo = CBitcoinAddress(addresses[0]).ToString();
+                    }
+                }
+            }
+            // loop through each input
+            for (const CTxIn& txin : tx.vin) {
+                bool isPublicSpend =  txin.IsZerocoinPublicSpend();
+                if (txin.IsZerocoinSpend() || isPublicSpend) {
+                    std::string serial_str;
+                    int denom;
+                    if (isPublicSpend) {
+                        CTxOut prevOut;
+                        CValidationState state;
+                        if(!GetOutput(txin.prevout.hash, txin.prevout.n, state, prevOut)){
+                            throw JSONRPCError(RPC_INTERNAL_ERROR, "public zerocoin spend prev output not found");
+                        }
+                        libzerocoin::ZerocoinParams *params = Params().Zerocoin_Params(false);
+                        PublicCoinSpend publicSpend(params);
+                        if (!ZZNNModule::parseCoinSpend(txin, tx, prevOut, publicSpend)) {
+                            throw JSONRPCError(RPC_INTERNAL_ERROR, "public zerocoin spend parse failed");
+                        }
+                        serial_str = publicSpend.getCoinSerialNumber().ToString(16);
+                        denom = libzerocoin::ZerocoinDenominationToInt(publicSpend.getDenomination());
+                    } else {
+                        libzerocoin::CoinSpend spend = TxInToZerocoinSpend(txin);
+                        serial_str = spend.getCoinSerialNumber().ToString(16);
+                        denom = libzerocoin::ZerocoinDenominationToInt(spend.getDenomination());
+                    }
+                    if (!fVerbose) {
+                        serialsArr.push_back(serial_str);
+                    } else {
+                        UniValue s(UniValue::VOBJ);
+                        s.push_back(Pair("serial", serial_str));
+                        s.push_back(Pair("denom", denom));
+                        s.push_back(Pair("bitsize", (int)serial_str.size()*4));
+                        s.push_back(Pair("spentTo", spentTo));
+                        s.push_back(Pair("txid", txid));
+                        s.push_back(Pair("blocknum", pblockindex->nHeight));
+                        s.push_back(Pair("blocktime", block.GetBlockTime()));
+                        serialsArr.push_back(s);
+                    }
+                }
+
+            } // end for vin in tx
+        } // end for tx in block
+
+        if (pblockindex->nHeight < heightEnd) {
+            LOCK(cs_main);
+            pblockindex = chainActive.Next(pblockindex);
+        } else {
+            break;
+        }
+
+    } // end for blocks
+
+    return serialsArr;
+
+}
+
+UniValue getblockindexstats(const UniValue& params, bool fHelp) {
+    if (fHelp || params.size() < 2 || params.size() > 3)
+        throw runtime_error(
+                "getblockindexstats height range ( fFeeOnly )\n"
+                "\nReturns aggregated BlockIndex data for blocks "
+                "\n[height, height+1, height+2, ..., height+range-1]\n"
+
+                "\nArguments:\n"
+                "1. height             (numeric, required) block height where the search starts.\n"
+                "2. range              (numeric, required) number of blocks to include.\n"
+                "3. fFeeOnly           (boolean, optional, default=False) return only fee info.\n"
+
+                "\nResult:\n"
+                "{\n"
+                "  \"first_block\": \"x\"            (integer) First counted block\n"
+                "  \"last_block\": \"x\"             (integer) Last counted block\n"
+                "  \"txcount\": xxxxx                (numeric) tx count (excluding coinbase/coinstake)\n"
+                "  \"txcount_all\": xxxxx            (numeric) tx count (including coinbase/coinstake)\n"
+                "  \"mintcount\": {              [if fFeeOnly=False]\n"
+                "        \"denom_1\": xxxx           (numeric) number of mints of denom_1 occurred over the block range\n"
+                "        \"denom_5\": xxxx           (numeric) number of mints of denom_5 occurred over the block range\n"
+                "         ...                    ... number of mints of other denominations: ..., 10, 50, 100, 500, 1000, 5000\n"
+                "  }\n"
+                "  \"spendcount\": {             [if fFeeOnly=False]\n"
+                "        \"denom_1\": xxxx           (numeric) number of spends of denom_1 occurred over the block range\n"
+                "        \"denom_5\": xxxx           (numeric) number of spends of denom_5 occurred over the block range\n"
+                "         ...                    ... number of spends of other denominations: ..., 10, 50, 100, 500, 1000, 5000\n"
+                "  }\n"
+                "  \"pubspendcount\": {             [if fFeeOnly=False]\n"
+                "        \"denom_1\": xxxx           (numeric) number of PUBLIC spends of denom_1 occurred over the block range\n"
+                "        \"denom_5\": xxxx           (numeric) number of PUBLIC spends of denom_5 occurred over the block range\n"
+                "         ...                    ... number of PUBLIC spends of other denominations: ..., 10, 50, 100, 500, 1000, 5000\n"
+                "  }\n"
+                "  \"txbytes\": xxxxx                (numeric) Sum of the size of all txes (zZNN excluded) over block range\n"
+                "  \"ttlfee\": xxxxx                 (numeric) Sum of the fee amount of all txes (zZNN mints excluded) over block range\n"
+                "  \"ttlfee_all\": xxxxx             (numeric) Sum of the fee amount of all txes (zZNN mints included) over block range\n"
+                "  \"feeperkb\": xxxxx               (numeric) Average fee per kb (excluding zc txes)\n"
+                "}\n"
+
+                "\nExamples:\n" +
+                HelpExampleCli("getblockindexstats", "1200000 1000") +
+                HelpExampleRpc("getblockindexstats", "1200000, 1000"));
+
+    int heightStart, heightEnd;
+    validaterange(params, heightStart, heightEnd);
+    // return object
+    UniValue ret(UniValue::VOBJ);
+    ret.push_back(Pair("Starting block", heightStart));
+    ret.push_back(Pair("Ending block", heightEnd));
+
+    bool fFeeOnly = false;
+    if (params.size() > 2) {
+        fFeeOnly = params[2].get_bool();
+    }
+
+    CAmount nFees = 0;
+    CAmount nFees_all = 0;
+    int64_t nBytes = 0;
+    int64_t nTxCount = 0;
+    int64_t nTxCount_all = 0;
+
+    std::map<libzerocoin::CoinDenomination, int64_t> mapMintCount;
+    std::map<libzerocoin::CoinDenomination, int64_t> mapSpendCount;
+    std::map<libzerocoin::CoinDenomination, int64_t> mapPublicSpendCount;
+    for (auto& denom : libzerocoin::zerocoinDenomList) {
+        mapMintCount.insert(make_pair(denom, 0));
+        mapSpendCount.insert(make_pair(denom, 0));
+        mapPublicSpendCount.insert(make_pair(denom, 0));
+    }
+
+    CBlockIndex* pindex = nullptr;
+    {
+        LOCK(cs_main);
+        pindex = chainActive[heightStart];
+    }
+
+    if (!pindex)
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "invalid block height");
+
+    while (true) {
+        CBlock block;
+        if (!ReadBlockFromDisk(block, pindex)) {
+            throw JSONRPCError(RPC_DATABASE_ERROR, "failed to read block from disk");
+        }
+
+        CAmount nValueIn = 0;
+        CAmount nValueOut = 0;
+        const int ntx = block.vtx.size();
+        nTxCount_all += ntx;
+        nTxCount = block.IsProofOfStake() ? nTxCount + ntx - 2 : nTxCount + ntx - 1;
+
+        // loop through each tx in block and save size and fee
+        for (const CTransaction& tx : block.vtx) {
+            if (tx.IsCoinBase() || (tx.IsCoinStake() && !tx.HasZerocoinSpendInputs()))
+                continue;
+
+            // fetch input value from prevouts and count spends
+            for (unsigned int j = 0; j < tx.vin.size(); j++) {
+                if (tx.vin[j].IsZerocoinSpend()) {
+                    if (!fFeeOnly)
+                        mapSpendCount[libzerocoin::IntToZerocoinDenomination(tx.vin[j].nSequence)]++;
+                    continue;
+                }
+                if (tx.vin[j].IsZerocoinPublicSpend()) {
+                    if (!fFeeOnly)
+                        mapPublicSpendCount[libzerocoin::IntToZerocoinDenomination(tx.vin[j].nSequence)]++;
+                    continue;
+                }
+
+                COutPoint prevout = tx.vin[j].prevout;
+                CTransaction txPrev;
+                uint256 hashBlock;
+                if(!GetTransaction(prevout.hash, txPrev, hashBlock, true))
+                    throw JSONRPCError(RPC_DATABASE_ERROR, "failed to read tx from disk");
+                nValueIn += txPrev.vout[prevout.n].nValue;
+            }
+
+            // zc spends have no fee
+            if (tx.HasZerocoinSpendInputs())
+                continue;
+
+            // sum output values in nValueOut
+            for (unsigned int j = 0; j < tx.vout.size(); j++) {
+                nValueOut += tx.vout[j].nValue;
+            }
+
+            // update sums
+            nFees_all += nValueIn - nValueOut;
+            if (!tx.HasZerocoinMintOutputs()) {
+                nFees += nValueIn - nValueOut;
+                nBytes += tx.GetSerializeSize(SER_NETWORK, CLIENT_VERSION);
+            }
+        }
+
+        // add mints to map
+        if (!fFeeOnly) {
+            for (auto& denom : libzerocoin::zerocoinDenomList) {
+                mapMintCount[denom] += count(pindex->vMintDenominationsInBlock.begin(), pindex->vMintDenominationsInBlock.end(), denom);
+            }
+        }
+
+        if (pindex->nHeight < heightEnd) {
+            LOCK(cs_main);
+            pindex = chainActive.Next(pindex);
+        } else {
+            break;
+        }
+    }
+
+    // get fee rate
+    CFeeRate nFeeRate = CFeeRate(nFees, nBytes);
+
+    // return UniValue object
+    ret.push_back(Pair("txcount", (int64_t)nTxCount));
+    ret.push_back(Pair("txcount_all", (int64_t)nTxCount_all));
+    if (!fFeeOnly) {
+        UniValue mint_obj(UniValue::VOBJ);
+        UniValue spend_obj(UniValue::VOBJ);
+        UniValue pubspend_obj(UniValue::VOBJ);
+        for (auto& denom : libzerocoin::zerocoinDenomList) {
+            mint_obj.push_back(Pair(strprintf("denom_%d", ZerocoinDenominationToInt(denom)), mapMintCount[denom]));
+            spend_obj.push_back(Pair(strprintf("denom_%d", ZerocoinDenominationToInt(denom)), mapSpendCount[denom]));
+            pubspend_obj.push_back(Pair(strprintf("denom_%d", ZerocoinDenominationToInt(denom)), mapPublicSpendCount[denom]));
+        }
+        ret.push_back(Pair("mintcount", mint_obj));
+        ret.push_back(Pair("spendcount", spend_obj));
+        ret.push_back(Pair("publicspendcount", pubspend_obj));
+
+    }
+    ret.push_back(Pair("txbytes", (int64_t)nBytes));
+    ret.push_back(Pair("ttlfee", FormatMoney(nFees)));
+    ret.push_back(Pair("ttlfee_all", FormatMoney(nFees_all)));
+    ret.push_back(Pair("feeperkb", FormatMoney(nFeeRate.GetFeePerK())));
+
+    return ret;
+
+}
+

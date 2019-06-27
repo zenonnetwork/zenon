@@ -9,7 +9,6 @@
 #include "config/Zenon-config.h"
 #endif
 
-#include "context.h"
 #include "bitcoingui.h"
 
 #include "clientmodel.h"
@@ -32,11 +31,11 @@
 #include "init.h"
 #include "main.h"
 #include "rpc/server.h"
-#include "ui_interface.h"
+#include "guiinterface.h"
 #include "util.h"
 
 #ifdef ENABLE_WALLET
-#include "wallet.h"
+#include "wallet/wallet.h"
 #endif
 
 #include <stdint.h>
@@ -492,9 +491,6 @@ WId BitcoinApplication::getMainWinId() const
 #ifndef BITCOIN_QT_TEST
 int main(int argc, char* argv[])
 {
-    ContextScopeInit context;
-
-    // Locale
     SetupEnvironment();
 
     /// 1. Parse command-line options. These take precedence over anything else.
@@ -564,7 +560,7 @@ int main(int argc, char* argv[])
     } catch (std::exception& e) {
         QMessageBox::critical(0, QObject::tr("Zenon Core"),
             QObject::tr("Error: Cannot parse configuration file: %1. Only use key=value syntax.").arg(e.what()));
-        return 1;
+        return 0;
     }
 
     /// 7. Determine network (and switch to network specific options)
@@ -578,6 +574,10 @@ int main(int argc, char* argv[])
         QMessageBox::critical(0, QObject::tr("Zenon Core"), QObject::tr("Error: Invalid combination of -regtest and -testnet."));
         return 1;
     }
+#ifdef ENABLE_WALLET
+    // Parse URIs on command line -- this can affect Params()
+    PaymentServer::ipcParseCommandLine(argc, argv);
+#endif
 
     QScopedPointer<const NetworkStyle> networkStyle(NetworkStyle::instantiate(QString::fromStdString(Params().NetworkIDString())));
     assert(!networkStyle.isNull());
@@ -587,9 +587,6 @@ int main(int argc, char* argv[])
     initTranslations(qtTranslatorBase, qtTranslator, translatorBase, translator);
 
 #ifdef ENABLE_WALLET
-    // Parse URIs on command line -- this can affect Params()
-    PaymentServer::ipcParseCommandLine(argc, argv);
-
     /// 7a. parse masternode.conf
     string strErr;
     if (!masternodeConfig.read(strErr)) {

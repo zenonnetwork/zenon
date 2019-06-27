@@ -1,5 +1,5 @@
 // Copyright (c) 2014-2016 The Dash Developers
-// Copyright (c) 2016-2018 The PIVX developers
+// Copyright (c) 2016-2019 The PIVX developers
 // Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -18,7 +18,7 @@
 #include "masternode-sync.h"
 #include "masternodeconfig.h"
 #include "sync.h"
-#include "wallet.h"
+#include "wallet/wallet.h"
 #include "walletmodel.h"
 #include "util.h"
 
@@ -200,10 +200,9 @@ void MasternodeList::StartAll(std::string strCommand)
 void MasternodeList::updateMyMasternodeInfo(QString strAlias, QString strAddr, CMasternode* pmn)
 {
     LOCK(cs_mnlistupdate);
-
     bool fOldRowFound = false;
     int nNewRow = 0;
-	
+
     for (int i = 0; i < ui->tableWidgetMyMasternodes->rowCount(); i++) {
         if (ui->tableWidgetMyMasternodes->item(i, 0)->text() == strAlias) {
             fOldRowFound = true;
