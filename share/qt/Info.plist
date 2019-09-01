@@ -17,13 +17,13 @@
   <string>APPL</string>
 
   <key>CFBundleGetInfoString</key>
-  <string>1.3.0, Copyright © 2009-2019 The Bitcoin Core developers, 2014-2019 The Dash Core developers, 2015-2019 The Zenon Core developers</string>
+  <string>1.4.0, Copyright © 2009-2019 The Bitcoin Core developers, 2014-2019 The Dash Core developers, 2015-2019 The Zenon Core developers</string>
 
   <key>CFBundleShortVersionString</key>
-  <string>1.3.0</string>
+  <string>1.4.0</string>
 
   <key>CFBundleVersion</key>
-  <string>1.3.0</string>
+  <string>1.4.0</string>
 
   <key>CFBundleSignature</key>
   <string>????</string>

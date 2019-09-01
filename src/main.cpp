@@ -2010,9 +2010,9 @@ int64_t GetBlockValue(int nHeight)
         nSubsidy = 6 * COIN;
     } else if (nHeight < 236160 && nHeight > 192960) {
         nSubsidy = 5.5 * COIN;
-    } else if (nHeight < 279360 && nHeight > 236160) {
+    } else if (nHeight <= 279360 && nHeight > 236160) {
         nSubsidy = 5 * COIN;
-    } else if (nHeight < 322560 && nHeight > 279360) {
+    } else if (nHeight <= 322560 && nHeight > 279360) {
         nSubsidy = 4 * COIN;
     } else if (nHeight > 322560) {
         nSubsidy = 3 * COIN;
@@ -5926,7 +5926,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         bool fMissingSporks = !pSporkDB->SporkExists(SPORK_14_NEW_PROTOCOL_ENFORCEMENT) &&
                 !pSporkDB->SporkExists(SPORK_15_NEW_PROTOCOL_ENFORCEMENT_2) &&
                 !pSporkDB->SporkExists(SPORK_16_ZEROCOIN_MAINTENANCE_MODE) &&
-                !pSporkDB->SporkExists(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_3);
+                !pSporkDB->SporkExists(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_3) &&
+				!pSporkDB->SporkExists(SPORK_22_NEW_PROTOCOL_ENFORCEMENT_4);
 
         if (fMissingSporks || !fRequestedSporksIDB){
             LogPrintf("asking peer for sporks\n");
@@ -6806,8 +6807,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
 //       it was the one which was commented out
 int ActiveProtocol()
 {
-    // SPORK_14 is used for 70922 (v.1.3.0)
-     if (IsSporkActive(SPORK_14_NEW_PROTOCOL_ENFORCEMENT))
+    // SPORK_22 is used for 70923 (v.1.4.0)
+     if (IsSporkActive(SPORK_22_NEW_PROTOCOL_ENFORCEMENT_4))
             return MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT;
 
     // SPORK_15 is used for 70921 (v.1.2.0)
