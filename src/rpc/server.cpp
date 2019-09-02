@@ -374,6 +374,7 @@ static const CRPCCommand vRPCCommands[] =
         {"Zenon", "getmasternodewinners", &getmasternodewinners, true, true, false},
         {"Zenon", "getmasternodescores", &getmasternodescores, true, true, false},
         {"Zenon", "mnsync", &mnsync, true, true, false},
+		{"Zenon", "spork", &spork, true, true, false},
         {"Zenon", "getpoolinfo", &getpoolinfo, true, true, false},
 
 #ifdef ENABLE_WALLET
