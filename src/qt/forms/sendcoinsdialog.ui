@@ -950,7 +950,7 @@
                 <string/>
                </property>
                <property name="styleSheet">
-                <string notr="true">margin-left: 14px; margin-bottom: 6px;</string>
+                <string notr="true">display: none; margin-left: 14px; margin-bottom: 6px;</string>
                </property>
                <property name="text">
                 <string>SwiftX</string>

@@ -18,7 +18,6 @@
 #include <boost/algorithm/string/case_conv.hpp> // for to_lower()
 #include <univalue.h>
 
-using namespace std;
 
 class CRPCConvertParam
 {
@@ -105,6 +104,18 @@ static const CRPCConvertParam vRPCConvertParams[] =
         {"prioritisetransaction", 2},
         {"setban", 2},
         {"setban", 3},
+        {"spork", 1},
+        {"preparebudget", 2},
+        {"preparebudget", 3},
+        {"preparebudget", 5},
+        {"submitbudget", 2},
+        {"submitbudget", 3},
+        {"submitbudget", 5},
+        {"submitbudget", 7},
+        // disabled until removal of the legacy 'masternode' command
+        //{"startmasternode", 1},
+        {"mnvoteraw", 1},
+        {"mnvoteraw", 4},
         {"reservebalance", 0},
         {"reservebalance", 1},
         {"setstakesplitthreshold", 0},
@@ -147,7 +158,7 @@ UniValue ParseNonRFCJSONValue(const std::string& strVal)
     UniValue jVal;
     if (!jVal.read(std::string("[")+strVal+std::string("]")) ||
         !jVal.isArray() || jVal.size()!=1)
-        throw runtime_error(string("Error parsing JSON:")+strVal);
+        throw std::runtime_error(std::string("Error parsing JSON:")+strVal);
     return jVal[0];
 }
 

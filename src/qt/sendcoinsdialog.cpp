@@ -134,8 +134,13 @@ SendCoinsDialog::SendCoinsDialog(QWidget* parent) : QDialog(parent, Qt::WindowSy
     ui->sliderSmartFee->setValue(settings.value("nSmartFeeSliderPosition").toInt());
     ui->customFee->setValue(settings.value("nTransactionFee").toLongLong());
     ui->checkBoxMinimumFee->setChecked(settings.value("fPayOnlyMinFee").toBool());
-    ui->checkBoxFreeTx->setChecked(settings.value("fSendFreeTransactions").toBool());
+    //ui->checkBoxFreeTx->setChecked(settings.value("fSendFreeTransactions").toBool());
     ui->checkzZNN->hide();
+
+    // Making zero fee txes option not visible (no need to clean this.. wallet 4.0 is right behind the corner)
+    ui->checkBoxFreeTx->setChecked(false);
+    ui->checkBoxFreeTx->setVisible(false);
+    ui->labelFreeTx->setVisible(false);
 
     minimizeFeeSection(settings.value("fFeeSectionMinimized").toBool());
     // If SwiftX activated hide button 'Choose'. Show otherwise.
@@ -702,6 +707,8 @@ void SendCoinsDialog::setMinimumFee()
 
 void SendCoinsDialog::updateFeeSectionControls()
 {
+	
+	ui->checkSwiftTX->setVisible(false);
     ui->sliderSmartFee->setVisible(!ui->checkSwiftTX->isChecked());
     ui->labelSmartFee->setVisible(!ui->checkSwiftTX->isChecked());
 //    ui->labelSmartFee2->setVisible(!ui->checkSwiftTX->isChecked());

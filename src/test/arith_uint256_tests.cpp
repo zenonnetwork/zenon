@@ -1,5 +1,5 @@
 // Copyright (c) 2011-2013 The Bitcoin Core developers
-// Copyright (c) 2017 The PIVX developers
+// Copyright (c) 2017-2018 The PIVX developers
 // Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -69,7 +69,7 @@ std::string ArrayToString(const unsigned char A[], unsigned int width)
 BOOST_AUTO_TEST_CASE( basics ) // constructors, equality, inequality
 {
     BOOST_CHECK(1 == 0+1);
-    // constructor arith_uint256(vector<char>):
+    // constructor arith_uint256(std::vector<char>):
     BOOST_CHECK(R1L.ToString() == ArrayToString(R1Array,32));
     BOOST_CHECK(R2L.ToString() == ArrayToString(R2Array,32));
     BOOST_CHECK(ZeroL.ToString() == ArrayToString(ZeroArray,32));

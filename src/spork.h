@@ -17,15 +17,12 @@
 #include "obfuscation.h"
 #include "protocol.h"
 
-using namespace std;
-using namespace boost;
 
 /*
     Don't ever reuse these IDs for other sporks
     - This would result in old clients getting confused about which spork is for what
+ */
 
-    Sporks 11,12, and 16 to be removed with 1st zerocoin release
-*/
 #define SPORK_START 10001
 #define SPORK_END 10021
 
@@ -58,7 +55,7 @@ using namespace boost;
 #define SPORK_15_NEW_PROTOCOL_ENFORCEMENT_2_DEFAULT 4070908800    //OFF
 #define SPORK_16_ZEROCOIN_MAINTENANCE_MODE_DEFAULT 4070908800     //OFF
 #define SPORK_21_NEW_PROTOCOL_ENFORCEMENT_3_DEFAULT 1424217600
-#define SPORK_22_NEW_PROTOCOL_ENFORCEMENT_4_DEFAULT 1424217600
+#define SPORK_22_NEW_PROTOCOL_ENFORCEMENT_4_DEFAULT 4070908800
 
 class CSporkMessage;
 class CSporkManager;

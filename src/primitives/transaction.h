@@ -295,6 +295,8 @@ public:
         return a.hash != b.hash;
     }
 
+    unsigned int GetTotalSize() const;
+
     std::string ToString() const;
 };
 
@@ -326,17 +328,6 @@ struct CMutableTransaction
     uint256 GetHash() const;
 
     std::string ToString() const;
-
-    friend bool operator==(const CMutableTransaction& a, const CMutableTransaction& b)
-    {
-        return a.GetHash() == b.GetHash();
-    }
-
-    friend bool operator!=(const CMutableTransaction& a, const CMutableTransaction& b)
-    {
-        return !(a == b);
-    }
-
 };
 
 #endif // BITCOIN_PRIMITIVES_TRANSACTION_H

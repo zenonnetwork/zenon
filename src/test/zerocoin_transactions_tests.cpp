@@ -1,4 +1,4 @@
-// Copyright (c) 2017-2018 The PIVX developers
+// Copyright (c) 2017-2019 The PIVX developers
 // Copyright (c) 2018-2019 The Zenon developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -17,7 +17,6 @@
 #include <boost/test/unit_test.hpp>
 #include <iostream>
 
-using namespace libzerocoin;
 
 
 BOOST_FIXTURE_TEST_SUITE(zerocoin_transactions_tests, TestingSetup)
@@ -27,12 +26,12 @@ static CWallet cWallet("unlocked.dat");
 BOOST_AUTO_TEST_CASE(zerocoin_spend_test)
 {
     SelectParams(CBaseChainParams::MAIN);
-    ZerocoinParams *ZCParams = Params().Zerocoin_Params(false);
+    libzerocoin::ZerocoinParams *ZCParams = Params().Zerocoin_Params(false);
     (void)ZCParams;
 
     bool fFirstRun;
     cWallet.LoadWallet(fFirstRun);
-    cWallet.zznnTracker = unique_ptr<CzZNNTracker>(new CzZNNTracker(cWallet.strWalletFile));
+    cWallet.zznnTracker = std::unique_ptr<CzZNNTracker>(new CzZNNTracker(cWallet.strWalletFile));
     CMutableTransaction tx;
     CWalletTx* wtx = new CWalletTx(&cWallet, tx);
     bool fMintChange=true;
@@ -42,13 +41,14 @@ BOOST_AUTO_TEST_CASE(zerocoin_spend_test)
     CAmount nAmount = COIN;
 
     CZerocoinSpendReceipt receipt;
-    cWallet.SpendZerocoin(nAmount, *wtx, receipt, vMints, fMintChange, fMinimizeChange);
+    std::list<std::pair<CBitcoinAddress*, CAmount>> outputs;
+    cWallet.SpendZerocoin(nAmount, *wtx, receipt, vMints, fMintChange, fMinimizeChange, outputs);
 
     BOOST_CHECK_MESSAGE(receipt.GetStatus() == ZZNN_TRX_FUNDS_PROBLEMS, strprintf("Failed Invalid Amount Check: %s", receipt.GetStatusMessage()));
 
     nAmount = 1;
     CZerocoinSpendReceipt receipt2;
-    cWallet.SpendZerocoin(nAmount, *wtx, receipt2, vMints, fMintChange, fMinimizeChange);
+    cWallet.SpendZerocoin(nAmount, *wtx, receipt2, vMints, fMintChange, fMinimizeChange, outputs);
 
     // if using "wallet.dat", instead of "unlocked.dat" need this
     /// BOOST_CHECK_MESSAGE(vString == "Error: Wallet locked, unable to create transaction!"," Locked Wallet Check Failed");
@@ -60,10 +60,10 @@ BOOST_AUTO_TEST_CASE(zerocoin_spend_test)
 BOOST_AUTO_TEST_CASE(zerocoin_public_spend_test)
 {
     SelectParams(CBaseChainParams::MAIN);
-    ZerocoinParams *ZCParams = Params().Zerocoin_Params(false);
+    libzerocoin::ZerocoinParams *ZCParams = Params().Zerocoin_Params(false);
     (void)ZCParams;
 
-    PrivateCoin privCoin(ZCParams, libzerocoin::CoinDenomination::ZQ_ONE, true);
+    libzerocoin::PrivateCoin privCoin(ZCParams, libzerocoin::CoinDenomination::ZQ_ONE, true);
     const CPrivKey privKey = privCoin.getPrivKey();
 
     CZerocoinMint mint = CZerocoinMint(

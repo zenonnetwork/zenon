@@ -1,4 +1,4 @@
-packages:=boost openssl libevent libcurl zeromq gmp zlib
+packages:=boost openssl libevent gmp
 
 qt_native_packages = native_protobuf
 qt_packages = qrencode protobuf zlib

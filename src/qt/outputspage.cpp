@@ -58,7 +58,7 @@ OutPutsPage::~OutPutsPage()
 QString OutPutsPage::getmasternodeoutputs ()
 {
     // Find possible candidates
-    vector<COutput> possibleCoins = activeMasternode.SelectCoinsMasternode();
+    std::vector<COutput> possibleCoins = activeMasternode.SelectCoinsMasternode();
 
     UniValue result(UniValue::VARR);
     for (COutput& out : possibleCoins) {

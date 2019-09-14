@@ -82,7 +82,7 @@ CMasternodePaymentDB::ReadResult CMasternodePaymentDB::Read(CMasternodePayments&
     // Don't try to resize to a negative number if file is small
     if (dataSize < 0)
         dataSize = 0;
-    vector<unsigned char> vchData;
+    std::vector<unsigned char> vchData;
     vchData.resize(dataSize);
     uint256 hashIn;
 
@@ -301,7 +301,7 @@ void CMasternodePayments::FillBlockPayee(CMutableTransaction& txNew, int64_t nFe
         }
     }
 
-    CAmount blockValue = GetBlockValue(pindexPrev->nHeight);
+    CAmount blockValue = GetBlockValue(pindexPrev->nHeight + 1);
     CAmount masternodePayment = GetMasternodePayment(pindexPrev->nHeight, blockValue, 0, fZZNNStake);
 
     if (hasPayment) {
@@ -318,7 +318,20 @@ void CMasternodePayments::FillBlockPayee(CMutableTransaction& txNew, int64_t nFe
 
             //subtract mn payment from the stake reward
             if (!txNew.vout[1].IsZerocoinMint())
-                txNew.vout[i - 1].nValue -= masternodePayment;
+                if (i == 2) {
+                    // Majority of cases; do it quick and move on
+                    txNew.vout[i - 1].nValue -= masternodePayment;
+                } else if (i > 2) {
+                    // special case, stake is split between (i-1) outputs
+                    unsigned int outputs = i-1;
+                    CAmount mnPaymentSplit = masternodePayment / outputs;
+                    CAmount mnPaymentRemainder = masternodePayment - (mnPaymentSplit * outputs);
+                    for (unsigned int j=1; j<=outputs; j++) {
+                        txNew.vout[j].nValue -= mnPaymentSplit;
+                    }
+                    // in case it's not an even division, take the last bit of dust from the last one
+                    txNew.vout[outputs].nValue -= mnPaymentRemainder;
+                }
         } else {
             txNew.vout.resize(2);
             txNew.vout[1].scriptPubKey = payee;

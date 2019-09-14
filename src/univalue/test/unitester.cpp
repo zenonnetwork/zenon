@@ -18,7 +18,7 @@
 #endif
 
 using namespace std;
-string srcdir(JSON_TEST_SRC);
+std::string srcdir(JSON_TEST_SRC);
 static bool test_failed = false;
 
 #define d_assert(expr) { if (!(expr)) { test_failed = true; fprintf(stderr, "%s failed\n", filename.c_str()); } }

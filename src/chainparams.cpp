@@ -15,9 +15,8 @@
 #include <assert.h>
 
 #include <boost/assign/list_of.hpp>
+#include <limits>
 
-using namespace std;
-using namespace boost::assign;
 
 struct SeedSpec6 {
     uint8_t addr[16];
@@ -59,12 +58,12 @@ boost::assign::map_list_of
 (       21000, uint256("4619d25fd45b6efe951d34d98abb38db3e8c6c4a7c3aae0ff08713c72c4f77df"))
 (       133262, uint256("a51cd0369bff53ec511f7c2de8461d7ee9b463816b063cd0192832d7cbe68d12"))
 (       139970, uint256("30615e4e42d211f19ded0437d04e9319f860abcb36ef3859ba378aa41afc1dd0"))
-(       243730, uint256("b1e637663aa6801ab38346d179e7092b4a42ae075fd8d2f34c851e49746317be"));
-
+(       243730, uint256("b1e637663aa6801ab38346d179e7092b4a42ae075fd8d2f34c851e49746317be"))
+(       260800, uint256("3ddcff914ca6f0b20cccb8359080956edd867a5ac05c2816a514c64530408dad"));
 static const Checkpoints::CCheckpointData data = {
     &mapCheckpoints,
-    1567188559, // * UNIX timestamp of last checkpoint block
-    744016,    // * total number of transactions between genesis and last checkpoint
+    1568226560, // * UNIX timestamp of last checkpoint block
+    779802, // * total number of transactions between genesis and last checkpoint
     //   (the tx=... number in the SetBestChain debug.log lines)
     2000        // * estimated number of transactions per day after checkpoint
 };
@@ -103,6 +102,17 @@ libzerocoin::ZerocoinParams* CChainParams::Zerocoin_Params(bool useModulusV1) co
     return &ZCParamsDec;
 }
 
+bool CChainParams::HasStakeMinAgeOrDepth(const int contextHeight, const uint32_t contextTime,
+        const int utxoFromBlockHeight, const uint32_t utxoFromBlockTime) const
+{
+    // before stake modifier V2, the age required was 60 * 60 (1 hour) / not required on regtest
+    if (!IsStakeModifierV2(contextHeight))
+        return (NetworkID() == CBaseChainParams::REGTEST || (utxoFromBlockTime + 3600 <= contextTime));
+
+    // after stake modifier V2, we require the utxo to be nStakeMinDepth deep in the chain
+    return (contextHeight - utxoFromBlockHeight >= nStakeMinDepth);
+}
+
 class CMainParams : public CChainParams
 {
 public:
@@ -124,13 +134,15 @@ public:
         bnProofOfWorkLimit = ~uint256(0) >> 20; // Zenon starting difficulty is 1 / 2^12
         nSubsidyHalvingInterval = 210000;       // Halving interval
         nMaxReorganizationDepth = 100;
-        nEnforceBlockUpgradeMajority = 750;
-        nRejectBlockOutdatedMajority = 950;
-        nToCheckBlockUpgradeMajority = 1000;
-        nMinerThreads = 0;                      // Obsolete (**TODO**)
-        nTargetTimespan = 1 * 60;               // Zenon: 1 day
-        nTargetSpacing = 1 * 60;                // Zenon: 1 minute
-        nMaturity = 100;                        // Block maturity
+        nEnforceBlockUpgradeMajority = 8100; // 75%
+        nRejectBlockOutdatedMajority = 10260; // 95%
+        nToCheckBlockUpgradeMajority = 10800; // Approximate expected amount of blocks in 7 days (1440*7.5)
+        nMinerThreads = 0;
+        nTargetSpacing = 1 * 60;        // 1 minute
+        nMaturity = 100;
+        nStakeMinDepth = 600;
+        nFutureTimeDriftPoW = 7200;
+        nFutureTimeDriftPoS = 180;
         nMasternodeCountDrift = 20;
         nMaxMoneyOut = 398360470 * COIN;
         
@@ -146,6 +158,7 @@ public:
         nBlockEnforceInvalidUTXO = 120555;      // Start enforcing the invalid UTXO's
         nInvalidAmountFiltered = 7779.9*COIN;      // Amount of invalid coins filtered through exchanges
         nBlockZerocoinV2 = 2147483000;              // !> The block that zerocoin v2 becomes active - roughly Tuesday, May 8, 2018 4:00:00 AM GMT
+        nBlockStakeModifierlV2 = 260720;
 
         // Fake Serial Attack
         nFakeSerialBlockheightEnd = 1686215;
@@ -164,7 +177,7 @@ public:
         CMutableTransaction txNew;
         txNew.vin.resize(1);
         txNew.vout.resize(1);
-        txNew.vin[0].scriptSig = CScript() << 486604799 << CScriptNum(4) << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
+        txNew.vin[0].scriptSig = CScript() << 486604799 << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
         txNew.vout[0].nValue = 75 * COIN;
         txNew.vout[0].scriptPubKey = CScript() << ParseHex("04ac54304d4e4398a1c981be127684c45391c7b5c16af575ccd9002c8c34888a780214d302f76b2c64bcaf0c080dd5bef431c405f90abd4bf2995f2e672dd088e2") << OP_CHECKSIG;
         genesis.vtx.push_back(txNew);
@@ -238,13 +251,14 @@ public:
         nZerocoinRequiredStakeDepth = 200; //The required confirmations for a zznn to be stakable
 
         nBudget_Fee_Confirmations = 6; // Number of confirmations for the finalization fee
-        nProposalEstablishmentTime = 60 * 60 * 2;
+        nProposalEstablishmentTime = 60 * 60 * 24; // Proposals must be at least a day old to make it into a budget
     }
 
     const Checkpoints::CCheckpointData& Checkpoints() const
     {
         return data;
     }
+
 };
 static CMainParams mainParams;
 
@@ -268,13 +282,12 @@ public:
         nRejectBlockOutdatedMajority = 75;
         nToCheckBlockUpgradeMajority = 100;
         nMinerThreads = 0;
-        nTargetTimespan = 1 * 60; // Zenon: 1 day
         nTargetSpacing = 1 * 60;  // Zenon: 1 minute
         nLastPOWBlock = 321;
         nMaturity = 15;
+        nStakeMinDepth = 100;
         nMasternodeCountDrift = 4;
         nModifierUpdateBlock = 51197;
-
         nMaxMoneyOut = 43199500 * COIN;
         nZerocoinStartHeight = 900900900;
         nZerocoinStartTime = 2147483000;
@@ -307,31 +320,19 @@ public:
         fMiningRequiresPeers = true;
         fAllowMinDifficultyBlocks = true;
         fDefaultConsistencyChecks = false;
-        fRequireStandard = false;
+        fRequireStandard = true;
         fMineBlocksOnDemand = false;
         fTestnetToBeDeprecatedFieldRPC = true;
 
         nPoolMaxTransactions = 2;
+        nBudgetCycleBlocks = 144; //!< Ten cycles per day on testnet
         strSporkKey = "";
         strObfuscationPoolDummyAddress = "y57cqfGRkekRyDRNeJiLtYVEbvhXrNbmox";
         nStartMasternodePayments = 1553068993;
-
-        /** Zerocoin */
-        zerocoinModulus = "25195908475657893494027183240048398571429282126204032027777137836043662020707595556264018525880784"
-            "4069182906412495150821892985591491761845028084891200728449926873928072877767359714183472702618963750149718246911"
-            "6507761337985909570009733045974880842840179742910064245869181719511874612151517265463228221686998754918242243363"
-            "7259085141865462043576798423387184774447920739934236584823824281198163815010674810451660377306056201619676256133"
-            "8441436038339044149526344321901146575444541784240209246165157233507787077498171257724679629263863563732899121548"
-            "31438167899885040445364023527381951378636564391212010397122822120720357";
-
-        nMaxZerocoinSpendsPerTransaction = 7; // Assume about 20kb each
-        nMinZerocoinMintFee = 1 * CENT; //high fee required for zerocoin mints
-        nMintRequiredConfirmations = 20; //the maximum amount of confirmations until accumulated in 19
-        nRequiredAccumulation = 1;
-        nDefaultSecurityLevel = 100; //full security level for accumulators
-        nZerocoinHeaderVersion = 3; //Block headers must be this version once zerocoin is active
         nBudget_Fee_Confirmations = 3; // Number of confirmations for the finalization fee. We have to make this very short
-        // here because we only have a 8 block finalization window on testnet
+                                       // here because we only have a 8 block finalization window on testnet
+
+        nProposalEstablishmentTime = 60 * 5; // Proposals must be at least 5 mns old to make it into a test budget
     }
     const Checkpoints::CCheckpointData& Checkpoints() const
     {
@@ -359,7 +360,6 @@ public:
         nRejectBlockOutdatedMajority = 950;
         nToCheckBlockUpgradeMajority = 1000;
         nMinerThreads = 1;
-        nTargetTimespan = 24 * 60 * 60; // Zenon: 1 day
         nTargetSpacing = 1 * 60;        // Zenon: 1 minutes
         bnProofOfWorkLimit = ~uint256(0) >> 1;
         genesis.nTime = 1553068993;
@@ -424,7 +424,6 @@ public:
     virtual void setSkipProofOfWorkCheck(bool afSkipProofOfWorkCheck) { fSkipProofOfWorkCheck = afSkipProofOfWorkCheck; }
 };
 static CUnitTestParams unitTestParams;
-
 
 static CChainParams* pCurrentParams = 0;
 

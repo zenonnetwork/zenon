@@ -27,10 +27,10 @@
 #include <zznn/accumulators.h>
 
 PrivacyDialog::PrivacyDialog(QWidget* parent) : QDialog(parent, Qt::WindowSystemMenuHint | Qt::WindowTitleHint | Qt::WindowCloseButtonHint | Qt::WindowCloseButtonHint),
-                                                          ui(new Ui::PrivacyDialog),
-                                                          walletModel(0),
-                                                          currentBalance(-1),
-                                                          fDenomsMinimized(true)
+                                                ui(new Ui::PrivacyDialog),
+                                                walletModel(0),
+                                                currentBalance(-1),
+                                                fDenomsMinimized(true)
 {
     nDisplayUnit = 0; // just make sure it's not unitialized
     ui->setupUi(this);
@@ -134,7 +134,7 @@ void PrivacyDialog::setModel(WalletModel* walletModel)
                    walletModel->getWatchBalance(), walletModel->getWatchUnconfirmedBalance(), walletModel->getWatchImmatureBalance());
 
         connect(walletModel, SIGNAL(balanceChanged(CAmount, CAmount, CAmount, CAmount, CAmount, CAmount, CAmount, CAmount, CAmount)), this,
-                               SLOT(setBalance(CAmount, CAmount, CAmount, CAmount, CAmount, CAmount, CAmount, CAmount, CAmount)));
+                SLOT(setBalance(CAmount, CAmount, CAmount, CAmount, CAmount, CAmount, CAmount, CAmount, CAmount)));
         connect(walletModel->getOptionsModel(), SIGNAL(zeromintEnableChanged(bool)), this, SLOT(updateAutomintStatus()));
         connect(walletModel->getOptionsModel(), SIGNAL(zeromintPercentageChanged(int)), this, SLOT(updateAutomintStatus()));
     }
@@ -201,8 +201,8 @@ void PrivacyDialog::on_pushButtonMintzZNN_clicked()
     int64_t nTime = GetTimeMillis();
 
     CWalletTx wtx;
-    vector<CDeterministicMint> vMints;
-    string strError = pwalletMain->MintZerocoin(nAmount, wtx, vMints, CoinControlDialog::coinControl);
+    std::vector<CDeterministicMint> vMints;
+    std::string strError = pwalletMain->MintZerocoin(nAmount, wtx, vMints, CoinControlDialog::coinControl);
 
     // Return if something went wrong during minting
     if (strError != ""){
@@ -247,7 +247,7 @@ void PrivacyDialog::on_pushButtonMintReset_clicked()
     ui->TEMintStatus->repaint ();
 
     int64_t nTime = GetTimeMillis();
-    string strResetMintResult = pwalletMain->ResetMintZerocoin();
+    std::string strResetMintResult = pwalletMain->ResetMintZerocoin();
     double fDuration = (double)(GetTimeMillis() - nTime)/1000.0;
     ui->TEMintStatus->setPlainText(QString::fromStdString(strResetMintResult) + tr("Duration: ") + QString::number(fDuration) + tr(" sec.\n"));
     ui->TEMintStatus->repaint ();
@@ -262,7 +262,7 @@ void PrivacyDialog::on_pushButtonSpentReset_clicked()
     ui->TEMintStatus->setPlainText(tr("Starting ResetSpentZerocoin: "));
     ui->TEMintStatus->repaint ();
     int64_t nTime = GetTimeMillis();
-    string strResetSpentResult = pwalletMain->ResetSpentZerocoin();
+    std::string strResetSpentResult = pwalletMain->ResetSpentZerocoin();
     double fDuration = (double)(GetTimeMillis() - nTime)/1000.0;
     ui->TEMintStatus->setPlainText(QString::fromStdString(strResetSpentResult) + tr("Duration: ") + QString::number(fDuration) + tr(" sec.\n"));
     ui->TEMintStatus->repaint ();
@@ -366,9 +366,9 @@ void PrivacyDialog::sendzZNN()
         QString strFeeWarning = "You've entered an amount with fractional digits and want the change to be converted to Zerocoin.<br /><br /><b>";
         strFeeWarning += QString::number(dzFee, 'f', 8) + " ZNN </b>will be added to the standard transaction fees!<br />";
         QMessageBox::StandardButton retval = QMessageBox::question(this, tr("Confirm additional Fees"),
-            strFeeWarning,
-            QMessageBox::Yes | QMessageBox::Cancel,
-            QMessageBox::Cancel);
+                                                                   strFeeWarning,
+                                                                   QMessageBox::Yes | QMessageBox::Cancel,
+                                                                   QMessageBox::Cancel);
 
         if (retval != QMessageBox::Yes) {
             // Sending canceled
@@ -399,9 +399,9 @@ void PrivacyDialog::sendzZNN()
 
     // Display message box
     QMessageBox::StandardButton retval = QMessageBox::question(this, tr("Confirm send coins"),
-        strQuestionString,
-        QMessageBox::Yes | QMessageBox::Cancel,
-        QMessageBox::Cancel);
+                                                               strQuestionString,
+                                                               QMessageBox::Yes | QMessageBox::Cancel,
+                                                               QMessageBox::Cancel);
 
     if (retval != QMessageBox::Yes) {
         // Sending canceled
@@ -413,8 +413,8 @@ void PrivacyDialog::sendzZNN()
     ui->TEMintStatus->repaint();
 
     // use mints from zZNN selector if applicable
-    vector<CMintMeta> vMintsToFetch;
-    vector<CZerocoinMint> vMintsSelected;
+    std::vector<CMintMeta> vMintsToFetch;
+    std::vector<CZerocoinMint> vMintsSelected;
     if (!ZZnnControlDialog::setSelectedMints.empty()) {
         vMintsToFetch = ZZnnControlDialog::GetSelectedMints();
 
@@ -433,13 +433,14 @@ void PrivacyDialog::sendzZNN()
     CWalletTx wtxNew;
     CZerocoinSpendReceipt receipt;
     bool fSuccess = false;
+    std::list<std::pair<CBitcoinAddress*, CAmount>> out;
     if(ui->payTo->text().isEmpty()){
         // Spend to newly generated local address
-        fSuccess = pwalletMain->SpendZerocoin(nAmount, wtxNew, receipt, vMintsSelected, fMintChange, fMinimizeChange);
+        fSuccess = pwalletMain->SpendZerocoin(nAmount, wtxNew, receipt, vMintsSelected, fMintChange, fMinimizeChange, out);
     }
     else {
         // Spend to supplied destination address
-        fSuccess = pwalletMain->SpendZerocoin(nAmount, wtxNew, receipt, vMintsSelected, fMintChange, fMinimizeChange, &address);
+        fSuccess = pwalletMain->SpendZerocoin(nAmount, wtxNew, receipt, vMintsSelected, fMintChange, fMinimizeChange, out, &address);
     }
 
     // Display errors during spend
@@ -626,13 +627,13 @@ void PrivacyDialog::setBalance(const CAmount& balance, const CAmount& unconfirme
     std::map<libzerocoin::CoinDenomination, int> mapUnconfirmed;
     std::map<libzerocoin::CoinDenomination, int> mapImmature;
     for (const auto& denom : libzerocoin::zerocoinDenomList){
-        mapDenomBalances.insert(make_pair(denom, 0));
-        mapUnconfirmed.insert(make_pair(denom, 0));
-        mapImmature.insert(make_pair(denom, 0));
+        mapDenomBalances.insert(std::make_pair(denom, 0));
+        mapUnconfirmed.insert(std::make_pair(denom, 0));
+        mapImmature.insert(std::make_pair(denom, 0));
     }
 
     std::vector<CMintMeta> vMints = pwalletMain->zznnTracker->GetMints(false);
-    map<libzerocoin::CoinDenomination, int> mapMaturityHeights = GetMintMaturityHeight();
+    std::map<libzerocoin::CoinDenomination, int> mapMaturityHeights = GetMintMaturityHeight();
     for (auto& meta : vMints){
         // All denominations
         mapDenomBalances.at(meta.denom)++;
@@ -793,10 +794,10 @@ void PrivacyDialog::updateAutomintStatus()
     QString strAutomintStatus = tr("AutoMint Status:");
 
     if (pwalletMain->isZeromintEnabled ()) {
-       strAutomintStatus += tr(" <b>enabled</b>.");
+        strAutomintStatus += tr(" <b>enabled</b>.");
     }
     else {
-       strAutomintStatus += tr(" <b>disabled</b>.");
+        strAutomintStatus += tr(" <b>disabled</b>.");
     }
 
     strAutomintStatus += tr(" Configured target percentage: <b>") + QString::number(pwalletMain->getZeromintPercentage()) + "%</b>";

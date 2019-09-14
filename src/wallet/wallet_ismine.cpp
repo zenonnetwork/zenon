@@ -1,7 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2016-2019 The PIVX developers
-// Copyright (c) 2017 The Zenon developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -14,11 +13,10 @@
 #include "util.h"
 
 
-using namespace std;
 
-typedef vector<unsigned char> valtype;
+typedef std::vector<unsigned char> valtype;
 
-unsigned int HaveKeys(const vector<valtype>& pubkeys, const CKeyStore& keystore)
+unsigned int HaveKeys(const std::vector<valtype>& pubkeys, const CKeyStore& keystore)
 {
     unsigned int nResult = 0;
     for (const valtype& pubkey : pubkeys) {
@@ -42,7 +40,7 @@ isminetype IsMine(const CKeyStore& keystore, const CScript& scriptPubKey)
     if(keystore.HaveMultiSig(scriptPubKey))
         return ISMINE_MULTISIG;
 
-    vector<valtype> vSolutions;
+    std::vector<valtype> vSolutions;
     txnouttype whichType;
     if(!Solver(scriptPubKey, whichType, vSolutions)) {
         if(keystore.HaveWatchOnly(scriptPubKey))
@@ -85,7 +83,7 @@ isminetype IsMine(const CKeyStore& keystore, const CScript& scriptPubKey)
         // partially owned (somebody else has a key that can spend
         // them) enable spend-out-from-under-you attacks, especially
         // in shared-wallet situations.
-        vector<valtype> keys(vSolutions.begin() + 1, vSolutions.begin() + vSolutions.size() - 1);
+        std::vector<valtype> keys(vSolutions.begin() + 1, vSolutions.begin() + vSolutions.size() - 1);
         if(HaveKeys(keys, keystore) == keys.size())
             return ISMINE_SPENDABLE;
         break;

@@ -15,7 +15,7 @@ from test_framework.util import assert_equal, assert_greater_than
 
 from fake_stake.base_test import PIVX_FakeStakeTest
 
-class zPIVwrappedSerialsTest(PIVX_FakeStakeTest):
+class zZNNwrappedSerialsTest(PIVX_FakeStakeTest):
 
     def run_test(self):
         q = 73829871667027927151400291810255409637272593023945445234219354687881008052707
@@ -35,7 +35,7 @@ class zPIVwrappedSerialsTest(PIVX_FakeStakeTest):
         sleep(2)
 
         # 2) Mint zerocoins
-        self.log.info("Minting %d-denom zPIVs..." % DENOM_TO_USE)
+        self.log.info("Minting %d-denom zZNNs..." % DENOM_TO_USE)
         balance = self.node.getbalance("*", 100)
         assert_greater_than(balance, DENOM_TO_USE)
         total_mints = 0
@@ -105,4 +105,4 @@ class zPIVwrappedSerialsTest(PIVX_FakeStakeTest):
 
 
 if __name__ == '__main__':
-    zPIVwrappedSerialsTest().main()
+    zZNNwrappedSerialsTest().main()
