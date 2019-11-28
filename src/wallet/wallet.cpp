@@ -1042,6 +1042,7 @@ CAmount CWalletTx::GetUnlockedCredit() const
 
         if (pwallet->IsSpent(hashTx, i) || pwallet->IsLockedCoin(hashTx, i)) continue;
         if (fMasterNode && vout[i].nValue == MNA * COIN) continue;
+        if (fMasterNode && vout[i].nValue == MNP * COIN) continue;
 
         nCredit += pwallet->GetCredit(txout, ISMINE_SPENDABLE);
         if (!MoneyRange(nCredit))
@@ -1074,8 +1075,8 @@ CAmount CWalletTx::GetLockedCredit() const
             nCredit += pwallet->GetCredit(txout, ISMINE_SPENDABLE);
         }
 
-        // Add masternode collaterals which are handled likc locked coins
-        else if (fMasterNode && vout[i].nValue == MNA * COIN) {
+        // Add masternode/pillar collaterals which are handled like locked coins
+        else if (fMasterNode && (vout[i].nValue == MNA * COIN || vout[i].nValue == MNP * COIN)) {
             nCredit += pwallet->GetCredit(txout, ISMINE_SPENDABLE);
         }
 
@@ -1150,7 +1151,7 @@ CAmount CWalletTx::GetLockedWatchOnlyCredit() const
         }
 
         // Add masternode collaterals which are handled likc locked coins
-        else if (fMasterNode && vout[i].nValue == MNA * COIN) {
+        else if (fMasterNode && (vout[i].nValue == MNA * COIN || vout[i].nValue == MNP * COIN)) {
             nCredit += pwallet->GetCredit(txout, ISMINE_WATCH_ONLY);
         }
 
@@ -1680,13 +1681,14 @@ void CWallet::AvailableCoins(
                 if (nCoinType == ONLY_DENOMINATED) {
                     found = IsDenominatedAmount(pcoin->vout[i].nValue);
                 } else if (nCoinType == ONLY_NOT10000IFMN) {
-                    found = !(fMasterNode && pcoin->vout[i].nValue == MNA * COIN);
+                    found = !(fMasterNode && (pcoin->vout[i].nValue == MNA * COIN || pcoin->vout[i].nValue == MNP * COIN));
                 } else if (nCoinType == ONLY_NONDENOMINATED_NOT10000IFMN) {
                     if (IsCollateralAmount(pcoin->vout[i].nValue)) continue; // do not use collateral amounts
-                    found = !IsDenominatedAmount(pcoin->vout[i].nValue);
-                    if (found && fMasterNode) found = pcoin->vout[i].nValue != MNA * COIN; // do not use Hot MN funds
+                        found = !IsDenominatedAmount(pcoin->vout[i].nValue);
+                    if (found && fMasterNode) 
+                        found = (pcoin->vout[i].nValue != MNA * COIN || pcoin->vout[i].nValue != MNP * COIN); // do not use Hot MN funds
                 } else if (nCoinType == ONLY_10000) {
-                    found = pcoin->vout[i].nValue == MNA * COIN;
+                    found = (pcoin->vout[i].nValue == MNA * COIN || pcoin->vout[i].nValue == MNP * COIN);
                 } else {
                     found = true;
                 }

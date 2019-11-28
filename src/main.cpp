@@ -1804,7 +1804,7 @@ bool AcceptableInputs(CTxMemPool& pool, CValidationState& state, const CTransact
         if (fCLTVHasMajority)
             flags |= SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY;
         if (!CheckInputs(tx, state, view, false, flags, true)) {
-            return error("AcceptableInputs: : ConnectInputs failed %s", hash.ToString());
+            return error("AcceptableInputs: : ConnectInputs failed %s\n", hash.ToString());
         }
 
         // Check again against just the consensus-critical mandatory script
@@ -2340,7 +2340,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState& state, const CCoinsVi
 
         if (!tx.IsCoinStake()) {
             if (nValueIn < tx.GetValueOut())
-                return state.DoS(100, error("CheckInputs() : %s value in (%s) < value out (%s)",
+                return state.DoS(100, error("CheckInputs() : %s value in (%s) < value out (%s)\n",
                                           tx.GetHash().ToString(), FormatMoney(nValueIn), FormatMoney(tx.GetValueOut())),
                     REJECT_INVALID, "bad-txns-in-belowout");
 
@@ -4725,6 +4725,36 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex, 
                 return state.Abort("Failed to write block");
         if (!ReceivedBlockTransactions(block, state, pindex, blockPos))
             return error("AcceptBlock() : ReceivedBlockTransactions failed");
+
+        //check for Pillar vout
+        if(pindex -> nHeight >= PLI_START){    
+            std::vector<CTransaction> current_txs = block.vtx;
+            for(int i = 0; i < (int)current_txs.size(); i++){
+                for(int j = 0; j < (int)current_txs[i].vout.size(); j++){
+                    CTxOut temp_vout = current_txs[i].vout[j];
+                    if(temp_vout.nValue == MNP * COIN){
+                        if(pindex -> nHeight <= PLI_END)
+                            MAX_PILLARS_ALLOWED++;
+                        
+                        COutPoint temp_outpoint(current_txs[i].GetHash(), j);
+                        vPillarCollaterals.push_back(std::make_pair(temp_outpoint, std::make_pair(pindex -> nHeight, i)));
+                        mPillarCollaterals.insert(std::make_pair(temp_outpoint, std::make_pair(pindex -> nHeight, i)));
+                    }
+                }
+                for(int j = 0; j < (int)current_txs[i].vin.size(); j++)
+                    if(mPillarCollaterals.count(current_txs[i].vin[j].prevout) > 0){
+                        if(pindex -> nHeight <= PLI_END)
+                            MAX_PILLARS_ALLOWED--;
+                        
+                        mPillarCollaterals.erase(current_txs[i].vin[j].prevout);
+                        for(int k = 0; k < (int)vPillarCollaterals.size(); k++)
+                            if(vPillarCollaterals[k].first == current_txs[i].vin[j].prevout){
+                                vPillarCollaterals.erase(vPillarCollaterals.begin() + k);
+                                break;
+                            }
+                    }
+            }
+        }
     } catch (std::runtime_error& e) {
         return state.Abort(std::string("System error: ") + e.what());
     }
@@ -5925,7 +5955,8 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                 !pSporkDB->SporkExists(SPORK_15_NEW_PROTOCOL_ENFORCEMENT_2) &&
                 !pSporkDB->SporkExists(SPORK_16_ZEROCOIN_MAINTENANCE_MODE) &&
                 !pSporkDB->SporkExists(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_3) &&
-				!pSporkDB->SporkExists(SPORK_22_NEW_PROTOCOL_ENFORCEMENT_4);
+				!pSporkDB->SporkExists(SPORK_22_NEW_PROTOCOL_ENFORCEMENT_4) && 
+                !pSporkDB->SporkExists(SPORK_23_NEW_PROTOCOL_ENFORCEMENT_5);
 
         if (fMissingSporks || !fRequestedSporksIDB){
             LogPrintf("asking peer for sporks\n");
@@ -6806,11 +6837,15 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 int ActiveProtocol()
 {
     // SPORK_22 is used for 70923 (v.1.4.0)
-//     if (IsSporkActive(SPORK_22_NEW_PROTOCOL_ENFORCEMENT_4))
-//            return MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT;
+    //     if (IsSporkActive(SPORK_22_NEW_PROTOCOL_ENFORCEMENT_4))
+    //            return MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT;
 
     // SPORK_15 is used for 70924 (v.1.5.0)
-    if (IsSporkActive(SPORK_15_NEW_PROTOCOL_ENFORCEMENT_2))
+    //if (IsSporkActive(SPORK_15_NEW_PROTOCOL_ENFORCEMENT_2))
+    //  return MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT;
+    
+    // SPORK_23 is used for 70925 (v 1.6.0)
+    if (IsSporkActive(SPORK_23_NEW_PROTOCOL_ENFORCEMENT_5))
             return MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT;
 
     return MIN_PEER_PROTO_VERSION_BEFORE_ENFORCEMENT;
@@ -7229,3 +7264,70 @@ public:
         mapOrphanTransactionsByPrev.clear();
     }
 } instance_of_cmaincleanup;
+
+///////
+/// pli section start
+
+struct less_than_key{
+    inline bool operator() (const std::pair<COutPoint, std::pair<int, int> >& a, const std::pair<COutPoint, std::pair<int, int> >& b){
+        if(a.second.first == b.second.first){ // nBlockHeight
+            if(a.second.second == b.second.second) // same tx index
+                return a.first.n < b.first.n;
+            return a.second.second < b.second.second;
+        }
+        
+        return a.second.first < b.second.first;
+    }
+};
+
+unsigned int MAX_PILLARS_ALLOWED;
+std::vector<std::pair<COutPoint, std::pair<int, int> > > vPillarCollaterals;
+std::unordered_map<COutPoint, std::pair<int, int>, hash_by_outpoint> mPillarCollaterals;
+
+bool InitPillars(){
+    LOCK(cs_main);
+
+    int left = PLI_START;
+    while(left <= chainActive.Height()){
+        CBlockIndex* block_index = chainActive[left];
+        CBlock current_block;
+        if(ReadBlockFromDisk(current_block, block_index)){
+            int tx_count = 0;
+            for(const CTransaction& current_tx: current_block.vtx){
+                int n = 0;
+                for(const CTxOut current_vout: current_tx.vout){
+                    if(current_vout.nValue == MNP * COIN){
+                        if(left <= PLI_END){
+                            MAX_PILLARS_ALLOWED++;
+                        }
+                        COutPoint temp_outpoint(current_tx.GetHash(), n);
+                        mPillarCollaterals.insert(std::make_pair(temp_outpoint, std::make_pair(left, tx_count)));
+                    }
+                    n++;
+                }
+                for(const CTxIn current_vin : current_tx.vin){
+                    if(mPillarCollaterals.count(current_vin.prevout) > 0){
+                        if(left <= PLI_END){
+                            MAX_PILLARS_ALLOWED--;
+                        }
+                        mPillarCollaterals.erase(current_vin.prevout);
+                    }
+                }
+                tx_count++;
+            }
+        }else{
+            return false;
+        }
+        left++;
+    }
+    for(auto& itr: mPillarCollaterals){
+        vPillarCollaterals.push_back(std::make_pair(COutPoint(itr.first), itr.second));
+    }
+
+    std::sort(vPillarCollaterals.begin(), vPillarCollaterals.end(), less_than_key());
+
+    return true;
+}
+
+/// pli section end
+///////////////////

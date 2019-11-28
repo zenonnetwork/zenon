@@ -38,6 +38,9 @@ private:
     bool GetMasterNodeVin(CTxIn& vin, CPubKey& pubkey, CKey& secretKey, std::string strTxHash, std::string strOutputIndex);
     bool GetVinFromOutput(COutput out, CTxIn& vin, CPubKey& pubkey, CKey& secretKey);
 
+    /// Get 15000 ZNN input that can be used for the Pillar
+    bool GetPillarVin(CTxIn& vin, CPubKey& pubkey, CKey& secretKey, std::string strTxHash, std::string strOutputIndex);
+
 public:
     // Initialized by init.cpp
     // Keys for the main Masternode
@@ -57,7 +60,7 @@ public:
 
     /// Manage status of main Masternode
     void ManageStatus();
-    std::string GetStatus();
+    std::string GetStatus(int which = 0);
 
     /// Create Masternode broadcast, needs to be relayed manually after that
     bool CreateBroadcast(std::string strService, std::string strKey, std::string strTxHash, std::string strOutputIndex, std::string& errorMessage, CMasternodeBroadcast &mnb, bool fOffline = false);
@@ -65,6 +68,10 @@ public:
     /// Get 5000 ZNN input that can be used for the Masternode
     bool GetMasterNodeVin(CTxIn& vin, CPubKey& pubkey, CKey& secretKey);
     std::vector<COutput> SelectCoinsMasternode();
+
+    /// Get 15000 ZNN input that can be used for the Pillar
+    bool GetPillarVin(CTxIn& vin, CPubKey& pubkey, CKey& secretKey);
+    std::vector<COutput> SelectCoinsPillar();
 
     /// Enable cold wallet mode (run a Masternode with no funds)
     bool EnableHotColdMasterNode(CTxIn& vin, CService& addr);

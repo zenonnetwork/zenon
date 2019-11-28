@@ -81,7 +81,8 @@ public:
 public slots:
     void accept();
     void on_AutoFillPrivKey_clicked();
-    void on_AutoFillOutputs_clicked();
+    void on_AutoFillMasternodeOutputs_clicked();
+    void on_AutoFillPillarOutputs_clicked();
 
 private:
     void saveCurrentRow();

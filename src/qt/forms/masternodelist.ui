@@ -294,9 +294,16 @@
                    </widget>
                   </item>
                   <item>
-                   <widget class="QPushButton" name="getOutputsButton">
+                   <widget class="QPushButton" name="getOutputsMasternodeButton">
                     <property name="text">
-                     <string>Get outputs</string>
+                     <string>Get Node outputs</string>
+                    </property>
+                   </widget>
+                  </item>
+                    <item>
+                   <widget class="QPushButton" name="getOutputsPillarButton">
+                    <property name="text">
+                     <string>Get Pillar outputs</string>
                     </property>
                    </widget>
                   </item>

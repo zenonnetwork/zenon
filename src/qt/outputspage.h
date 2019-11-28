@@ -34,9 +34,10 @@ class OutPutsPage : public QDialog
 
 public:
 
-    explicit OutPutsPage(QWidget* parent);
+    explicit OutPutsPage(QWidget* parent, int which = 0);
     ~OutPutsPage();
 	QString  getmasternodeoutputs();
+    QString getpillaroutputs();
     const QString& getReturnValue() const { return returnValue; }
 
 public slots:

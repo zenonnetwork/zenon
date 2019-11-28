@@ -164,7 +164,7 @@ void ConfigureMasternodePage::on_AutoFillPrivKey_clicked()
 }
 
 
-void ConfigureMasternodePage::on_AutoFillOutputs_clicked()
+void ConfigureMasternodePage::on_AutoFillMasternodeOutputs_clicked()
 {
     // Find possible candidates
     std::vector<COutput> possibleCoins = activeMasternode.SelectCoinsMasternode();
@@ -189,3 +189,28 @@ void ConfigureMasternodePage::on_AutoFillOutputs_clicked()
     }
 }
 
+void ConfigureMasternodePage::on_AutoFillPillarOutputs_clicked()
+{
+    // Find possible candidates
+    std::vector<COutput> possibleCoins = activeMasternode.SelectCoinsPillar();
+
+    int test = 0;
+    for (COutput& out : possibleCoins) {
+        std::string TXHash = out.tx->GetHash().ToString();
+        std::string OutputID = std::to_string(out.i);
+                for (CMasternodeConfig::CMasternodeEntry mne : masternodeConfig.getEntries()) {
+                        if(OutputID == mne.getOutputIndex() && TXHash == mne.getTxHash()) {
+                                test = 1;
+
+                        }
+                }
+
+                if(test == 0) {
+                        ui->outputEdit->setText(QString::fromStdString(out.tx->GetHash().ToString()));
+                        ui->outputIdEdit->setText(QString::fromStdString(std::to_string(out.i)));
+
+                        break;
+                }
+                test = 0;
+    }
+}

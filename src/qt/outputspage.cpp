@@ -29,12 +29,16 @@
 #include <boost/tokenizer.hpp>
 #include <fstream>
 
-OutPutsPage::OutPutsPage(QWidget* parent) : QDialog(parent),
+OutPutsPage::OutPutsPage(QWidget* parent, int which) : QDialog(parent),
                                             ui(new Ui::OutPutsPage)
 {
     ui->setupUi(this);
 
-	key = OutPutsPage::getmasternodeoutputs();
+    if(which == 0)
+	    key = OutPutsPage::getmasternodeoutputs();
+    else
+        key = OutPutsPage::getpillaroutputs();
+
 	ui->outPutsWidget->append(key);
 
     // Build context menu
@@ -52,13 +56,36 @@ OutPutsPage::~OutPutsPage()
     delete ui;
 }
 
-
-
-
 QString OutPutsPage::getmasternodeoutputs ()
 {
     // Find possible candidates
     std::vector<COutput> possibleCoins = activeMasternode.SelectCoinsMasternode();
+
+    UniValue result(UniValue::VARR);
+    for (COutput& out : possibleCoins) {
+        UniValue obj(UniValue::VOBJ);
+        obj.push_back(Pair("txhash", out.tx->GetHash().ToString()));
+        obj.push_back(Pair("outputidx", out.i));
+        result.push_back(obj);
+    }
+	
+        std::string strPrint;
+
+        // Format result reply
+        if (result.isNull())
+            strPrint = "";
+        else if (result.isStr())
+            strPrint = result.get_str();
+        else
+            strPrint = result.write(2);
+
+    return QString::fromStdString(strPrint);
+}
+
+QString OutPutsPage::getpillaroutputs ()
+{
+    // Find possible candidates
+    std::vector<COutput> possibleCoins = activeMasternode.SelectCoinsPillar();
 
     UniValue result(UniValue::VARR);
     for (COutput& out : possibleCoins) {

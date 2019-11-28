@@ -97,7 +97,89 @@ UniValue listmasternodes(const UniValue& params, bool fHelp)
 
         CMasternode* mn = mnodeman.Find(s.second.vin);
 
-        if (mn != NULL) {
+        if (mn != NULL && !(mn -> isPillar)) {
+            if (strFilter != "" && strTxHash.find(strFilter) == std::string::npos &&
+                mn->Status().find(strFilter) == std::string::npos &&
+                CBitcoinAddress(mn->pubKeyCollateralAddress.GetID()).ToString().find(strFilter) == std::string::npos) continue;
+
+            std::string strStatus = mn->Status();
+            std::string strHost;
+            int port;
+            SplitHostPort(mn->addr.ToString(), port, strHost);
+            CNetAddr node = CNetAddr(strHost, false);
+            std::string strNetwork = GetNetworkName(node.GetNetwork());
+
+            obj.push_back(Pair("rank", (strStatus == "ENABLED" ? s.first : 0)));
+            obj.push_back(Pair("network", strNetwork));
+            obj.push_back(Pair("txhash", strTxHash));
+            obj.push_back(Pair("outidx", (uint64_t)oIdx));
+            obj.push_back(Pair("pubkey", HexStr(mn->pubKeyMasternode)));
+            obj.push_back(Pair("status", strStatus));
+            obj.push_back(Pair("addr", CBitcoinAddress(mn->pubKeyCollateralAddress.GetID()).ToString()));
+            obj.push_back(Pair("version", mn->protocolVersion));
+            obj.push_back(Pair("lastseen", (int64_t)mn->lastPing.sigTime));
+            obj.push_back(Pair("activetime", (int64_t)(mn->lastPing.sigTime - mn->sigTime)));
+            obj.push_back(Pair("lastpaid", (int64_t)mn->GetLastPaid()));
+
+            ret.push_back(obj);
+        }
+    }
+
+    return ret;
+}
+
+UniValue listpillars(const UniValue& params, bool fHelp)
+{
+    std::string strFilter = "";
+
+    if (params.size() == 1) strFilter = params[0].get_str();
+
+    if (fHelp || (params.size() > 1))
+        throw std::runtime_error(
+            "listpillars ( \"filter\" )\n"
+            "\nGet a ranked list of pillars\n"
+
+            "\nArguments:\n"
+            "1. \"filter\"    (string, optional) Filter search text. Partial match by txhash, status, or addr.\n"
+
+            "\nResult:\n"
+            "[\n"
+            "  {\n"
+            "    \"rank\": n,           (numeric) Pillar Rank (or 0 if not enabled)\n"
+            "    \"txhash\": \"hash\",    (string) Collateral transaction hash\n"
+            "    \"outidx\": n,         (numeric) Collateral transaction output index\n"
+            "    \"pubkey\": \"key\",   (string) Pillar public key used for message broadcasting\n"
+            "    \"status\": s,         (string) Status (ENABLED/EXPIRED/REMOVE/etc)\n"
+            "    \"addr\": \"addr\",      (string) Pillar Zenon address\n"
+            "    \"version\": v,        (numeric) Pillar protocol version\n"
+            "    \"lastseen\": ttt,     (numeric) The time in seconds since epoch (Jan 1 1970 GMT) of the last seen\n"
+            "    \"activetime\": ttt,   (numeric) The time in seconds since epoch (Jan 1 1970 GMT) pillar has been active\n"
+            "    \"lastpaid\": ttt,     (numeric) The time in seconds since epoch (Jan 1 1970 GMT) pillar was last paid\n"
+            "  }\n"
+            "  ,...\n"
+            "]\n"
+
+            "\nExamples:\n" +
+            HelpExampleCli("listpillars", "") + HelpExampleRpc("listpillars", ""));
+
+    UniValue ret(UniValue::VARR);
+    int nHeight;
+    {
+        LOCK(cs_main);
+        CBlockIndex* pindex = chainActive.Tip();
+        if(!pindex) return 0;
+        nHeight = pindex->nHeight;
+    }
+    std::vector<std::pair<int, CMasternode> > vMasternodeRanks = mnodeman.GetMasternodeRanks(nHeight);
+    for (PAIRTYPE(int, CMasternode) & s : vMasternodeRanks) {
+        UniValue obj(UniValue::VOBJ);
+        std::string strVin = s.second.vin.prevout.ToStringShort();
+        std::string strTxHash = s.second.vin.prevout.hash.ToString();
+        uint32_t oIdx = s.second.vin.prevout.n;
+
+        CMasternode* mn = mnodeman.Find(s.second.vin);
+
+        if (mn != NULL && (mn -> isPillar)) {
             if (strFilter != "" && strTxHash.find(strFilter) == std::string::npos &&
                 mn->Status().find(strFilter) == std::string::npos &&
                 CBitcoinAddress(mn->pubKeyCollateralAddress.GetID()).ToString().find(strFilter) == std::string::npos) continue;
@@ -332,6 +414,7 @@ UniValue startmasternode (const UniValue& params, bool fHelp)
         UniValue resultsObj(UniValue::VARR);
 
         for (CMasternodeConfig::CMasternodeEntry mne : masternodeConfig.getEntries()) {
+            UniValue statusObj(UniValue::VOBJ);
             std::string errorMessage;
             int nIndex;
             if(!mne.castOutputIndex(nIndex))
@@ -344,10 +427,28 @@ UniValue startmasternode (const UniValue& params, bool fHelp)
                 if (strCommand == "missing") continue;
                 if (strCommand == "disabled" && pmn->IsEnabled()) continue;
             }
+            
+            //check before relaying a mn
+            bool result = true;
+            COutPoint current_outpoint(uint256S(mne.getTxHash()), nIndex);
+            for(int i = 0; i < (int)vPillarCollaterals.size(); i++){
+                if(vPillarCollaterals[i].first == current_outpoint){
+                    if((i + 1) > MAX_PILLARS_ALLOWED){
+                        result = false;
+                        failed++;
+                        errorMessage = "There are no slots available for pillars!\n";
+                        statusObj.push_back(Pair("error", errorMessage));
+                        resultsObj.push_back(statusObj);
+                    }
+                    break;
+                }
+            }
 
-            bool result = activeMasternode.CreateBroadcast(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), errorMessage, mnb);
+            if(!result)
+                continue;
 
-            UniValue statusObj(UniValue::VOBJ);
+            result = activeMasternode.CreateBroadcast(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), errorMessage, mnb);
+
             statusObj.push_back(Pair("alias", mne.getAlias()));
             statusObj.push_back(Pair("result", result ? "success" : "failed"));
 
@@ -388,7 +489,27 @@ UniValue startmasternode (const UniValue& params, bool fHelp)
                 std::string errorMessage;
                 CMasternodeBroadcast mnb;
 
-                bool result = activeMasternode.CreateBroadcast(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), errorMessage, mnb);
+                //check before relaying a mn
+                bool result = true;
+                int nIndex;
+                mne.castOutputIndex(nIndex);
+                COutPoint current_outpoint(uint256S(mne.getTxHash()), nIndex);
+                for(int i = 0; i < (int)vPillarCollaterals.size(); i++){
+                    if(vPillarCollaterals[i].first == current_outpoint){
+                        if((i + 1) > MAX_PILLARS_ALLOWED){
+                            result = false;
+                            failed++;
+                            errorMessage = "There are no available slots for pillars\n!";
+                            statusObj.push_back(Pair("errorMessage", errorMessage));
+                        }
+                        break;
+                    }
+                }
+
+                if(!result)
+                    break;
+
+                result = activeMasternode.CreateBroadcast(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), errorMessage, mnb);
 
                 statusObj.push_back(Pair("result", result ? "successful" : "failed"));
 
@@ -472,6 +593,59 @@ UniValue getmasternodeoutputs (const UniValue& params, bool fHelp)
         obj.push_back(Pair("outputidx", out.i));
         ret.push_back(obj);
     }
+
+    return ret;
+}
+
+UniValue getpillaroutputs (const UniValue& params, bool fHelp)
+{
+    if (fHelp || (params.size() != 0))
+        throw std::runtime_error(
+            "getpillaroutputs\n"
+            "\nPrint all pillar transaction outputs\n"
+
+            "\nResult:\n"
+            "[\n"
+            "  {\n"
+            "    \"txhash\": \"xxxx\",    (string) output transaction hash\n"
+            "    \"outputidx\": n       (numeric) output index number\n"
+            "  }\n"
+            "  ,...\n"
+            "]\n"
+
+            "\nExamples:\n" +
+            HelpExampleCli("getpillaroutputs", "") + HelpExampleRpc("getpillaroutputs", ""));
+
+    // Find possible candidates
+    std::vector<COutput> possibleCoins = activeMasternode.SelectCoinsPillar();
+
+    UniValue ret(UniValue::VARR);
+    for (COutput& out : possibleCoins) {
+        UniValue obj(UniValue::VOBJ);
+        obj.push_back(Pair("txhash", out.tx->GetHash().ToString()));
+        obj.push_back(Pair("outputidx", out.i));
+        ret.push_back(obj);
+    }
+
+    return ret;
+}
+
+UniValue getpillarslots(const UniValue& params, bool fHelp){
+    if (fHelp || (params.size() != 0))
+        throw std::runtime_error(
+            "getpillarslots\n"
+            "\nPrint the number of availalbe slots for pillar\n"
+            "\nResult:\n"
+            "\"available_slots\": n, (numeric)\n"
+            "\n Examples:\n" +
+            HelpExampleCli("getpillarslots", "") + HelpExampleRpc("getpillarslots", ""));
+
+    UniValue ret(UniValue::VARR);
+    UniValue obj(UniValue::VOBJ);
+
+    int slots = vPillarCollaterals.size() < MAX_PILLARS_ALLOWED ? MAX_PILLARS_ALLOWED - vPillarCollaterals.size() : 0;
+    obj.push_back(Pair("available_slots", slots));
+    ret.push_back(obj);
 
     return ret;
 }
@@ -563,6 +737,8 @@ UniValue getmasternodestatus (const UniValue& params, bool fHelp)
     CMasternode* pmn = mnodeman.Find(activeMasternode.vin);
 
     if (pmn) {
+        if(pmn -> isPillar)
+            throw std::runtime_error("This node is configured as a Pillar! Use getpillarstatus instead!");
         UniValue mnObj(UniValue::VOBJ);
         mnObj.push_back(Pair("txhash", activeMasternode.vin.prevout.hash.ToString()));
         mnObj.push_back(Pair("outputidx", (uint64_t)activeMasternode.vin.prevout.n));
@@ -573,6 +749,46 @@ UniValue getmasternodestatus (const UniValue& params, bool fHelp)
         return mnObj;
     }
     throw std::runtime_error("Masternode not found in the list of available masternodes. Current status: "
+                        + activeMasternode.GetStatus());
+}
+
+UniValue getpillarstatus (const UniValue& params, bool fHelp)
+{
+    if (fHelp || (params.size() != 0))
+        throw std::runtime_error(
+            "getpillarstatus\n"
+            "\nPrint pillar status\n"
+
+            "\nResult:\n"
+            "{\n"
+            "  \"txhash\": \"xxxx\",      (string) Collateral transaction hash\n"
+            "  \"outputidx\": n,        (numeric) Collateral transaction output index number\n"
+            "  \"netaddr\": \"xxxx\",     (string) Pillar network address\n"
+            "  \"addr\": \"xxxx\",        (string) Zenon address for pillar payments\n"
+            "  \"status\": \"xxxx\",      (string) Pillar status\n"
+            "  \"message\": \"xxxx\"      (string) Pillar status message\n"
+            "}\n"
+
+            "\nExamples:\n" +
+            HelpExampleCli("getpillarstatus", "") + HelpExampleRpc("getpillarstatus", ""));
+
+    if (!fMasterNode) throw std::runtime_error("This is not a pillar");
+
+    CMasternode* pmn = mnodeman.Find(activeMasternode.vin);
+
+    if (pmn) {
+        if(pmn -> isPillar == 0)
+            throw std::runtime_error("This node is configured as a Masternode! Use getmasternodestatus instead");
+        UniValue mnObj(UniValue::VOBJ);
+        mnObj.push_back(Pair("txhash", activeMasternode.vin.prevout.hash.ToString()));
+        mnObj.push_back(Pair("outputidx", (uint64_t)activeMasternode.vin.prevout.n));
+        mnObj.push_back(Pair("netaddr", activeMasternode.service.ToString()));
+        mnObj.push_back(Pair("addr", CBitcoinAddress(pmn->pubKeyCollateralAddress.GetID()).ToString()));
+        mnObj.push_back(Pair("status", activeMasternode.status));
+        mnObj.push_back(Pair("message", activeMasternode.GetStatus(1)));
+        return mnObj;
+    }
+    throw std::runtime_error("Pillar not found in the list of available pillars. Current status: "
                         + activeMasternode.GetStatus());
 }
 

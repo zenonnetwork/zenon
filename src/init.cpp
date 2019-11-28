@@ -1772,6 +1772,12 @@ bool AppInit2()
     // ********************************************************* Step 10: setup ObfuScation
 
 	uiInterface.InitMessage(_("Initializing Pillars"));
+    // get all utxo and also init MAX_PILLARS_ALLOWED in the same iteration
+    
+    if(!InitPillars()){
+        LogPrintf("Pillars did not initialize correctly!\n");
+        return InitError("Pillars did not initialize correctly!");
+    }
 
     CMasternodeDB mndb;
     CMasternodeDB::ReadResult readResult = mndb.Read(mnodeman);

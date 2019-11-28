@@ -219,12 +219,22 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="AutoFillOutputs">
+      <widget class="QPushButton" name="AutoFillMasternodeOutputs">
        <property name="styleSheet">
         <string notr="true">color: #6FF34D;</string>
        </property>
        <property name="text">
-        <string>&amp;Autofill Outputs</string>
+        <string>&amp;Autofill Node Outputs</string>
+       </property>
+      </widget>
+     </item>
+    <item>
+      <widget class="QPushButton" name="AutoFillPillarOutputs">
+       <property name="styleSheet">
+        <string notr="true">color: #6FF34D;</string>
+       </property>
+       <property name="text">
+        <string>&amp;Autofill Pillar Outputs</string>
        </property>
       </widget>
      </item>

@@ -27,7 +27,7 @@ public:
 
     COutPoint() { SetNull(); }
     COutPoint(uint256 hashIn, uint32_t nIn) { hash = hashIn; n = nIn; }
-
+    COutPoint(const COutPoint& other) { hash = other.hash; n = other.n; }
     ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>

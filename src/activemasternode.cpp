@@ -37,6 +37,20 @@ void CActiveMasternode::ManageStatus()
         pmn = mnodeman.Find(pubKeyMasternode);
         if (pmn != NULL) {
             pmn->Check();
+            
+            
+            //check before activating a pillar
+            for(int i = 0; i < (int)vPillarCollaterals.size(); i++){
+                if(vPillarCollaterals[i].first == pmn -> vin.prevout){
+                    if((i + 1) > MAX_PILLARS_ALLOWED){
+                        status = ACTIVE_MASTERNODE_NOT_CAPABLE;
+                        notCapableReason = "There are no slots available for pillars!";
+                        return;
+                    }
+                    break;
+                }
+            }
+
             if (pmn->IsEnabled() && pmn->protocolVersion == PROTOCOL_VERSION) EnableHotColdMasterNode(pmn->vin, pmn->addr);
         }
     }
@@ -86,7 +100,7 @@ void CActiveMasternode::ManageStatus()
         CPubKey pubKeyCollateralAddress;
         CKey keyCollateralAddress;
 
-        if (GetMasterNodeVin(vin, pubKeyCollateralAddress, keyCollateralAddress)) {
+        if (GetMasterNodeVin(vin, pubKeyCollateralAddress, keyCollateralAddress) || GetPillarVin(vin, pubKeyCollateralAddress, keyCollateralAddress)) {
             if (GetInputAge(vin) < MASTERNODE_MIN_CONFIRMATIONS) {
                 status = ACTIVE_MASTERNODE_INPUT_TOO_NEW;
                 notCapableReason = strprintf("%s - %d confirmations", GetStatus(), GetInputAge(vin));
@@ -135,19 +149,27 @@ void CActiveMasternode::ManageStatus()
     }
 }
 
-std::string CActiveMasternode::GetStatus()
+std::string CActiveMasternode::GetStatus(int which)
 {
     switch (status) {
     case ACTIVE_MASTERNODE_INITIAL:
-        return "Node just started, not yet activated";
+            return "Node just started, not yet activated";
     case ACTIVE_MASTERNODE_SYNC_IN_PROCESS:
-        return "Sync in progress. Must wait until sync is complete to start Masternode";
+        if(which == 0)
+            return "Sync in progress. Must wait until sync is complete to start Masternode";
+        return "Sync in progress. Must wait until sync is complete to start Pillar";
     case ACTIVE_MASTERNODE_INPUT_TOO_NEW:
-        return strprintf("Masternode input must have at least %d confirmations", MASTERNODE_MIN_CONFIRMATIONS);
+        if(which == 0)
+            return strprintf("Masternode input must have at least %d confirmations", MASTERNODE_MIN_CONFIRMATIONS);
+        return strprintf("Pillar input must have at least %d confirmations", MASTERNODE_MIN_CONFIRMATIONS);
     case ACTIVE_MASTERNODE_NOT_CAPABLE:
-        return "Not capable masternode: " + notCapableReason;
+        if(which == 0)
+            return "Not capable masternode: " + notCapableReason;
+        return "Not capable pillar: " + notCapableReason;    
     case ACTIVE_MASTERNODE_STARTED:
-        return "Masternode successfully started";
+        if(which == 0)
+            return "Masternode successfully started";
+        return "Pillar successfully started";
     default:
         return "unknown";
     }
@@ -225,7 +247,7 @@ bool CActiveMasternode::CreateBroadcast(std::string strService, std::string strK
         return false;
     }
 
-    if (!GetMasterNodeVin(vin, pubKeyCollateralAddress, keyCollateralAddress, strTxHash, strOutputIndex)) {
+    if (!GetMasterNodeVin(vin, pubKeyCollateralAddress, keyCollateralAddress, strTxHash, strOutputIndex) && !GetPillarVin(vin, pubKeyCollateralAddress, keyCollateralAddress, strTxHash, strOutputIndex)) {
         errorMessage = strprintf("Could not allocate vin %s:%s for masternode %s", strTxHash, strOutputIndex, strService);
         LogPrintf("CActiveMasternode::CreateBroadcast() - %s\n", errorMessage);
         return false;
@@ -322,6 +344,60 @@ bool CActiveMasternode::GetMasterNodeVin(CTxIn& vin, CPubKey& pubkey, CKey& secr
     return GetVinFromOutput(*selectedOutput, vin, pubkey, secretKey);
 }
 
+bool CActiveMasternode::GetPillarVin(CTxIn& vin, CPubKey& pubkey, CKey& secretKey)
+{
+    return GetPillarVin(vin, pubkey, secretKey, "", "");
+}
+
+bool CActiveMasternode::GetPillarVin(CTxIn& vin, CPubKey& pubkey, CKey& secretKey, std::string strTxHash, std::string strOutputIndex)
+{
+    // wait for reindex and/or import to finish
+    if (fImporting || fReindex) return false;
+
+    // Find possible candidates
+    TRY_LOCK(pwalletMain->cs_wallet, fWallet);
+    if (!fWallet) return false;
+
+    std::vector<COutput> possibleCoins = SelectCoinsPillar();
+    COutput* selectedOutput;
+
+    // Find the vin
+    if (!strTxHash.empty()) {
+        // Let's find it
+        uint256 txHash(strTxHash);
+        int outputIndex;
+        try {
+            outputIndex = std::stoi(strOutputIndex.c_str());
+        } catch (const std::exception& e) {
+            LogPrintf("%s: %s on strOutputIndex\n", __func__, e.what());
+            return false;
+        }
+
+        bool found = false;
+        for (COutput& out : possibleCoins) {
+            if (out.tx->GetHash() == txHash && out.i == outputIndex) {
+                selectedOutput = &out;
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            LogPrintf("CActiveMasternode::GetPillarVin - Could not locate valid vin\n");
+            return false;
+        }
+    } else {
+        // No output specified,  Select the first one
+        if (possibleCoins.size() > 0) {
+            selectedOutput = &possibleCoins[0];
+        } else {
+            LogPrintf("CActiveMasternode::GetPillarVin - Could not locate specified vin from possible list\n");
+            return false;
+        }
+    }
+    // At this point we have a selected output, retrieve the associated info
+    return GetVinFromOutput(*selectedOutput, vin, pubkey, secretKey);
+}
 
 // Extract Masternode vin information from output
 bool CActiveMasternode::GetVinFromOutput(COutput out, CTxIn& vin, CPubKey& pubkey, CKey& secretKey)
@@ -388,6 +464,47 @@ std::vector<COutput> CActiveMasternode::SelectCoinsMasternode()
     // Filter
     for (const COutput& out : vCoins) {
         if (out.tx->vout[out.i].nValue == MNA * COIN) { //exactly
+            filteredCoins.push_back(out);
+        }
+    }
+    return filteredCoins;
+}
+
+// get all possible outputs for running Masternode
+std::vector<COutput> CActiveMasternode::SelectCoinsPillar()
+{
+    std::vector<COutput> vCoins;
+    std::vector<COutput> filteredCoins;
+    std::vector<COutPoint> confLockedCoins;
+
+    // Temporary unlock Pillar coins from masternode.conf
+    if (GetBoolArg("-mnconflock", true)) {
+        uint256 mnTxHash;
+        for (CMasternodeConfig::CMasternodeEntry mne : masternodeConfig.getEntries()) {
+            mnTxHash.SetHex(mne.getTxHash());
+
+            int nIndex;
+            if(!mne.castOutputIndex(nIndex))
+                continue;
+
+            COutPoint outpoint = COutPoint(mnTxHash, nIndex);
+            confLockedCoins.push_back(outpoint);
+            pwalletMain->UnlockCoin(outpoint);
+        }
+    }
+
+    // Retrieve all possible outputs
+    pwalletMain->AvailableCoins(vCoins);
+
+    // Lock Pillar coins from masternode.conf back if they where temporary unlocked
+    if (!confLockedCoins.empty()) {
+        for (COutPoint outpoint : confLockedCoins)
+            pwalletMain->LockCoin(outpoint);
+    }
+
+    // Filter
+    for (const COutput& out : vCoins) {
+        if (out.tx->vout[out.i].nValue == MNP * COIN) { //exactly
             filteredCoins.push_back(out);
         }
     }

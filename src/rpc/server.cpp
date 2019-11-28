@@ -374,6 +374,10 @@ static const CRPCCommand vRPCCommands[] =
         {"Zenon", "mnsync", &mnsync, true, true, false},
         {"Zenon", "spork", &spork, true, true, false},
         {"Zenon", "getpoolinfo", &getpoolinfo, true, true, false},
+        {"Zenon", "getpillaroutputs", &getpillaroutputs, true, true, false},
+        {"Zenon", "getpillarslots", &getpillarslots, true, true, false},
+        {"Zenon", "listpillars", &listpillars, true, true, false},
+        {"Zenon", "getpillarstatus", &getpillarstatus, true, true, false},
 
 #ifdef ENABLE_WALLET
         /* Wallet */

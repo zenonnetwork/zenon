@@ -1420,7 +1420,7 @@ void UnitDisplayStatusBarControl::createContextMenu()
     // apply the default stylesheet
     auto const stylesheet{GUIUtil::loadStyleSheet()};
     menu = new QMenu();
-    menu->setStyleSheet(stylesheet);
+    //menu->setStyleSheet(stylesheet);
     foreach (BitcoinUnits::Unit u, BitcoinUnits::availableUnits()) {
         QAction* menuAction = new QAction(QString(BitcoinUnits::name(u)), this);
         menuAction->setData(QVariant(u));

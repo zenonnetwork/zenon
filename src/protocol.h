@@ -24,6 +24,8 @@
 #define MESSAGE_START_SIZE 4
 #define MNA 5000
 #define MNA2 4999.99
+#define MNP 15000
+#define MNP2 14999.99
 
 /** Message header.
  * (4) message start.

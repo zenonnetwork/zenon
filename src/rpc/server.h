@@ -305,6 +305,11 @@ extern UniValue getmasternodestatus(const UniValue& params, bool fHelp);
 extern UniValue getmasternodewinners(const UniValue& params, bool fHelp);
 extern UniValue getmasternodescores(const UniValue& params, bool fHelp);
 
+extern UniValue getpillaroutputs(const UniValue& params, bool fHelp);
+extern UniValue getpillarslots(const UniValue& params, bool fHelp);
+extern UniValue listpillars(const UniValue& params, bool fHelp);
+extern UniValue getpillarstatus(const UniValue& params, bool fHelp);
+
 extern UniValue preparebudget(const UniValue& params, bool fHelp); // in rpc/budget.cpp
 extern UniValue submitbudget(const UniValue& params, bool fHelp);
 extern UniValue mnbudgetvote(const UniValue& params, bool fHelp);

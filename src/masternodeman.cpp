@@ -12,6 +12,10 @@
 #include "spork.h"
 #include "util.h"
 #include <boost/filesystem.hpp>
+#include <stdlib.h>
+#include <time.h>
+#include <math.h>
+#include <main.h>
 
 #define MN_WINNER_MINIMUM_AGE 8000    // Age in seconds. This should be > MASTERNODE_REMOVAL_SECONDS to avoid misconfigured new nodes in the list.
 
@@ -208,6 +212,15 @@ bool CMasternodeMan::Add(CMasternode& mn)
     CMasternode* pmn = Find(mn.vin);
     if (pmn == NULL) {
         LogPrint("masternode", "CMasternodeMan: Adding new Masternode %s - %i now\n", mn.vin.prevout.hash.ToString(), size() + 1);
+        CTransaction txPrev;
+        uint256 hashBlock;
+        if (GetTransaction(mn.vin.prevout.hash, txPrev, hashBlock, true)){
+            if (mn.vin.prevout.n < txPrev.vout.size()){
+                if(txPrev.vout[mn.vin.prevout.n].nValue == (MNP * COIN)){
+                    mn.isPillar = 1;
+                }
+            }
+        }
         vMasternodes.push_back(mn);
         return true;
     }
@@ -382,7 +395,8 @@ int CMasternodeMan::CountEnabled(int protocolVersion)
 
     for (CMasternode& mn : vMasternodes) {
         mn.Check();
-        if (mn.protocolVersion < protocolVersion || !mn.IsEnabled()) continue;
+        if (mn.protocolVersion < protocolVersion || !mn.IsEnabled()) 
+            continue;
         i++;
     }
 
@@ -481,32 +495,54 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
     CMasternode* pBestMasternode = NULL;
     std::vector<std::pair<int64_t, CTxIn> > vecMasternodeLastPaid;
 
+    int count_pillars = 0;
+    int count_mns = 0;
+    for (CMasternode& mn : vMasternodes){
+        if(mn.isPillar == 1 && mn.IsEnabled())
+            count_pillars++;
+        if(mn.isPillar == 0 && mn.IsEnabled())
+            count_mns++;
+    }
+
+    double ratio = 1;
+    if(!(count_mns == 0 && count_pillars == 0))
+        ratio = double(4 * count_pillars * 100) / (count_mns + count_pillars * 4);
+
+    bool block_winner;
+
+    if(nBlockHeight % 100 >= floor(ratio)){
+        block_winner = 0;
+    }else{
+        block_winner = 1;
+    }
+
+    if(count_pillars == 0){
+        block_winner = 0;
+    }else if(count_mns == 0){
+        block_winner = 1;
+    }
+
     /*
         Make a vector with all of the last paid times
     */
 
     int nMnCount = CountEnabled();
-    for (CMasternode& mn : vMasternodes) {
-        mn.Check();
-        if (!mn.IsEnabled()) continue;
+    for (CMasternode& mn : vMasternodes)
+        if((mn.isPillar ^ block_winner) == 0){
+            mn.Check();
+            if (!mn.IsEnabled()) continue;
+            // //check protocol version
+            if (mn.protocolVersion < masternodePayments.GetMinMasternodePaymentsProto()) continue;
+            //it's in the list (up to 8 entries ahead of current block to allow propagation) -- so let's skip it
+            if (masternodePayments.IsScheduled(mn, nBlockHeight)) continue;
+            //it's too new, wait for a cycle
+            if (fFilterSigTime && mn.sigTime + (nMnCount * 2.6 * 60) > GetAdjustedTime()) continue;
+            //make sure it has as many confirmations as there are masternodes
+            if (mn.GetMasternodeInputAge() < nMnCount) continue;
 
-        // //check protocol version
-        if (mn.protocolVersion < masternodePayments.GetMinMasternodePaymentsProto()) continue;
-
-        //it's in the list (up to 8 entries ahead of current block to allow propagation) -- so let's skip it
-        if (masternodePayments.IsScheduled(mn, nBlockHeight)) continue;
-
-        //it's too new, wait for a cycle
-        if (fFilterSigTime && mn.sigTime + (nMnCount * 2.6 * 60) > GetAdjustedTime()) continue;
-
-        //make sure it has as many confirmations as there are masternodes
-        if (mn.GetMasternodeInputAge() < nMnCount) continue;
-
-        vecMasternodeLastPaid.push_back(std::make_pair(mn.SecondsSincePayment(), mn.vin));
+            vecMasternodeLastPaid.push_back(std::make_pair(mn.SecondsSincePayment(), mn.vin));
+            nCount++;
     }
-
-    nCount = (int)vecMasternodeLastPaid.size();
-
     //when the network is in the process of upgrading, don't penalize nodes that recently restarted
     if (fFilterSigTime && nCount < nMnCount / 3) return GetNextMasternodeInQueueForPayment(nBlockHeight, false, nCount);
 
@@ -571,23 +607,56 @@ CMasternode* CMasternodeMan::GetCurrentMasterNode(int mod, int64_t nBlockHeight,
 {
     int64_t score = 0;
     CMasternode* winner = NULL;
+    
+    if (chainActive.Tip() == NULL) 
+        return winner;
+    if (nBlockHeight == 0)
+        nBlockHeight = chainActive.Tip()->nHeight + 1;
 
-    // scan for winner
-    for (CMasternode& mn : vMasternodes) {
-        mn.Check();
-        if (mn.protocolVersion < minProtocol || !mn.IsEnabled()) continue;
-
-        // calculate the score for each Masternode
-        uint256 n = mn.CalculateScore(mod, nBlockHeight);
-        int64_t n2 = n.GetCompact(false);
-
-        // determine the winner
-        if (n2 > score) {
-            score = n2;
-            winner = &mn;
-        }
+    int count_pillars = 0;
+    int count_mns = 0;
+    for (CMasternode& mn : vMasternodes){
+        if(mn.isPillar == 1 && mn.IsEnabled())
+            count_pillars++;
+        if(mn.isPillar == 0 && mn.IsEnabled())
+            count_mns++;
     }
 
+    double ratio = 1;
+    if(!(count_mns == 0 && count_pillars == 0))
+        ratio = double(4 * count_pillars * 100) / (count_mns + count_pillars * 4);
+
+    bool block_winner;
+
+    if(nBlockHeight % 100 >= floor(ratio)){
+        block_winner = 0;
+    }else{
+        block_winner = 1;
+    }
+
+    if(count_pillars == 0){
+        block_winner = 0;
+    }else if(count_mns == 0){
+        block_winner = 1;
+    }
+
+    // scan for winner
+    for (CMasternode& mn : vMasternodes){
+        if((mn.isPillar ^ block_winner) == 0){
+            mn.Check();
+            if (mn.protocolVersion < minProtocol || !mn.IsEnabled()) continue;
+            // calculate the score for each Masternode
+            uint256 n = mn.CalculateScore(mod, nBlockHeight);
+            int64_t n2 = n.GetCompact(false);
+
+            // determine the winner
+            if (n2 > score) {
+                score = n2;
+                winner = &mn;
+            }
+        }
+    }
+    
     return winner;
 }
 
@@ -733,13 +802,27 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
         CMasternodeBroadcast mnb;
         vRecv >> mnb;
 
+        int nDoS = 0;
+        
+        // check when receiving a mnb to not accept it
+        if(mPillarCollaterals.count(mnb.vin.prevout) > 0){
+            for(int i = 0; i < (int)vPillarCollaterals.size(); i++)
+                if(vPillarCollaterals[i].first == mnb.vin.prevout){
+                    if((i + 1) > MAX_PILLARS_ALLOWED){
+                        nDoS = 100;
+                        Misbehaving(pfrom -> GetId(), nDoS);
+                        return;
+                    }
+                    break;
+                }
+        }
+
         if (mapSeenMasternodeBroadcast.count(mnb.GetHash())) { //seen
             masternodeSync.AddedMasternodeList(mnb.GetHash());
             return;
         }
         mapSeenMasternodeBroadcast.insert(std::make_pair(mnb.GetHash(), mnb));
 
-        int nDoS = 0;
         if (!mnb.CheckAndUpdate(nDoS)) {
             if (nDoS > 0)
                 Misbehaving(pfrom->GetId(), nDoS);

@@ -78,6 +78,7 @@ CMasternode::CMasternode()
     nScanningErrorCount = 0;
     nLastScanningErrorBlockHeight = 0;
     lastTimeChecked = 0;
+    isPillar = 0;
 }
 
 CMasternode::CMasternode(const CMasternode& other)
@@ -101,6 +102,7 @@ CMasternode::CMasternode(const CMasternode& other)
     nScanningErrorCount = other.nScanningErrorCount;
     nLastScanningErrorBlockHeight = other.nLastScanningErrorBlockHeight;
     lastTimeChecked = 0;
+    isPillar = other.isPillar;
 }
 
 CMasternode::CMasternode(const CMasternodeBroadcast& mnb)
@@ -124,6 +126,7 @@ CMasternode::CMasternode(const CMasternodeBroadcast& mnb)
     nScanningErrorCount = 0;
     nLastScanningErrorBlockHeight = 0;
     lastTimeChecked = 0;
+    isPillar = mnb.isPillar;
 }
 
 //
@@ -210,10 +213,17 @@ void CMasternode::Check(bool forceCheck)
     if (!unitTest) {
         CValidationState state;
         CMutableTransaction tx = CMutableTransaction();
-        CTxOut vout = CTxOut(MNA2 * COIN, obfuScationPool.collateralPubKey);
+        CTxOut vout;
+        
+        if(mPillarCollaterals.count(vin.prevout) > 0){
+            vout = CTxOut(MNP2 * COIN, obfuScationPool.collateralPubKey);
+        }else{
+            vout = CTxOut(MNA2 * COIN, obfuScationPool.collateralPubKey);
+        }
+
         tx.vin.push_back(vin);
         tx.vout.push_back(vout);
-
+        
         {
             TRY_LOCK(cs_main, lockMain);
             if (!lockMain) return;
@@ -582,7 +592,14 @@ bool CMasternodeBroadcast::CheckInputsAndAdd(int& nDoS)
 
     CValidationState state;
     CMutableTransaction tx = CMutableTransaction();
-    CTxOut vout = CTxOut(MNA2 * COIN, obfuScationPool.collateralPubKey);
+    CTxOut vout;
+    
+    if(mPillarCollaterals.count(vin.prevout) > 0){
+        vout = CTxOut(MNP2 * COIN, obfuScationPool.collateralPubKey);
+    }else{
+        vout = CTxOut(MNA2 * COIN, obfuScationPool.collateralPubKey);
+    }
+
     tx.vin.push_back(vin);
     tx.vout.push_back(vout);
 

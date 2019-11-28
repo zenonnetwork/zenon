@@ -57,7 +57,7 @@ private:
     // critical section to protect the inner data structures specifically on messaging
     mutable CCriticalSection cs_process_message;
 
-    // map to hold all MNs
+    // map to hold all MNs and Pillars
     std::vector<CMasternode> vMasternodes;
     // who's asked for the Masternode list and the last time
     std::map<CNetAddr, int64_t> mAskedUsForMasternodeList;
@@ -143,8 +143,19 @@ public:
 
     void ProcessMessage(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
 
-    /// Return the number of (unique) Masternodes
-    int size() { return vMasternodes.size(); }
+    // return the number of active pillars
+    int pillar_count(){
+        int count = 0;
+        for(int i = 0; i < (int)vMasternodes.size(); i++)
+            if(vMasternodes[i].isPillar)
+                count++;
+        return count;
+    }
+
+    /// Return the number of (unique) Masternodes and Pillars
+    int size() {
+        return (int)vMasternodes.size();
+    }
 
     /// Return the number of Masternodes older than (default) 8000 seconds
     int stable_size ();

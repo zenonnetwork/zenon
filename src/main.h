@@ -40,6 +40,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <unordered_map>
 
 #include "libzerocoin/CoinSpend.h"
 #include "lightzznnthread.h"
@@ -653,5 +654,25 @@ struct CBlockTemplate {
     std::vector<CAmount> vTxFees;
     std::vector<int64_t> vTxSigOps;
 };
+
+//////////////
+/// pli section start
+
+class hash_by_outpoint{
+    public:
+        size_t operator() (const COutPoint& to_hash) const {
+            return (std::hash<std::string>()(to_hash.ToString()));
+        }
+};
+
+extern unsigned int MAX_PILLARS_ALLOWED;
+extern std::vector<std::pair<COutPoint, std::pair<int, int> > > vPillarCollaterals;
+extern std::unordered_map<COutPoint, std::pair<int, int>, hash_by_outpoint> mPillarCollaterals;
+static const unsigned int PLI_START = 365760;
+static const unsigned int PLI_END = 385920;
+bool InitPillars();
+
+/// pli section end
+/////////////
 
 #endif // BITCOIN_MAIN_H

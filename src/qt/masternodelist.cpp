@@ -77,7 +77,7 @@ MasternodeList::MasternodeList(QWidget* parent) : QWidget(parent),
     connect(ui->tableWidgetMyMasternodes, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(showContextMenu(const QPoint&)));
     connect(startAliasAction, SIGNAL(triggered()), this, SLOT(on_startButton_clicked()));
     connect(copyAliasAction, SIGNAL(triggered()), this, SLOT(copyAlias()));
-    connect(editAliasAction, SIGNAL(triggered()), this, SLOT(editConfigureMasternode()));
+    connect(editAliasAction, SIGNAL(triggered()), this, SLOT(on_editConfigureMasternode_clicked()));
     connect(deleteAliasAction, SIGNAL(triggered()), this, SLOT(deleteAlias()));
 
     timer = new QTimer(this);
@@ -109,15 +109,15 @@ void MasternodeList::showContextMenu(const QPoint& point)
     if (item) contextMenu->exec(QCursor::pos());
 }
 
-void MasternodeList::on_getMNPrivKeyButton_clicked()
+void MasternodeList::on_getOutputsMasternodeButton_clicked()
 {
-    PrivKeyPage dlg(this);
+    OutPutsPage dlg(this, 0);
     dlg.exec();
 }
 
-void MasternodeList::on_getOutputsButton_clicked()
+void MasternodeList::on_getOutputsPillarButton_clicked()
 {
-    OutPutsPage dlg(this);
+    OutPutsPage dlg(this, 1);
     dlg.exec();
 }
 
@@ -130,15 +130,32 @@ void MasternodeList::StartAlias(std::string strAlias)
         if (mne.getAlias() == strAlias) {
             std::string strError;
             CMasternodeBroadcast mnb;
+        
+            bool fSuccess = true;
+            int nIndex;
+            mne.castOutputIndex(nIndex);
+            COutPoint current_outpoint(uint256S(mne.getTxHash()), nIndex);
+            for(int i = 0; i < (int)vPillarCollaterals.size(); i++){
+                if(vPillarCollaterals[i].first == current_outpoint){
+                    if((i + 1) > MAX_PILLARS_ALLOWED){
+                        fSuccess = false;
+                        strStatusHtml += "<br> Failed to start pillar. There are no slots available.<br>";
+                    }
+                    break;
+                }
+            }
+            if(!fSuccess)
+                break;
 
-            bool fSuccess = CMasternodeBroadcast::Create(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), strError, mnb);
+            //check before relaying
+            fSuccess = CMasternodeBroadcast::Create(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), strError, mnb);
 
             if (fSuccess) {
-                strStatusHtml += "<br>Successfully started masternode.";
+                strStatusHtml += "<br>Successfully started!";
                 mnodeman.UpdateMasternodeList(mnb);
                 mnb.Relay();
             } else {
-                strStatusHtml += "<br>Failed to start masternode.<br>Error: " + strError;
+                strStatusHtml += "<br>Failed to start!<br>Error: " + strError;
             }
             break;
         }
@@ -171,7 +188,25 @@ void MasternodeList::StartAll(std::string strCommand)
 
         if (strCommand == "start-missing" && pmn) continue;
 
-        bool fSuccess = CMasternodeBroadcast::Create(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), strError, mnb);
+        bool fSuccess = true;
+        mne.castOutputIndex(nIndex);
+        COutPoint current_outpoint(uint256S(mne.getTxHash()), nIndex);
+        for(int i = 0; i < (int)vPillarCollaterals.size(); i++){
+            if(vPillarCollaterals[i].first == current_outpoint){
+                if((i + 1) > MAX_PILLARS_ALLOWED){
+                    fSuccess = false;
+                    strFailedHtml += "<br> Failed to start " + mne.getAlias() + ". There are no slots available. <br>";
+                    nCountFailed++;
+                }
+                break;
+            }
+        }
+
+        if(!fSuccess)
+            continue;
+
+        //check before relaying
+        fSuccess = CMasternodeBroadcast::Create(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), strError, mnb);
 
         if (fSuccess) {
             nCountSuccessful++;
@@ -185,7 +220,7 @@ void MasternodeList::StartAll(std::string strCommand)
     pwalletMain->Lock();
 
     std::string returnObj;
-    returnObj = strprintf("Successfully started %d nodes, failed to start %d, total %d", nCountSuccessful, nCountFailed, nCountFailed + nCountSuccessful);
+    returnObj = strprintf("Successfully started %d Nodes, failed to start %d, total %d", nCountSuccessful, nCountFailed, nCountFailed + nCountSuccessful);
     if (nCountFailed > 0) {
         returnObj += strFailedHtml;
     }
@@ -279,7 +314,7 @@ void MasternodeList::updateMyNodeList(bool fForce)
     }
     mnodeman.CountNetworks(ActiveProtocol(), ipv4, ipv6, onion);
     ui->pillarsCount->setStyleSheet("font-size:14pt; color: #6FF34D; font-weight:600");
-    ui->pillarsCount->setText(QString::number(mnodeman.size() / 3));
+    ui->pillarsCount->setText(QString::number(mnodeman.pillar_count()));
 }
 
 void MasternodeList::on_startButton_clicked()
