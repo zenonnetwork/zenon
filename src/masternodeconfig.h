@@ -7,6 +7,8 @@
 #ifndef SRC_MASTERNODECONFIG_H_
 #define SRC_MASTERNODECONFIG_H_
 
+#include <main.h>
+
 #include <string>
 #include <vector>
 
@@ -116,6 +118,22 @@ public:
         return c;
     }
 
+    bool isPillarOwner(){
+        int ans = 0;
+        for(CMasternodeEntry e : entries){
+            uint256 mnTxHash;
+            mnTxHash.SetHex(e.getTxHash());
+            int nIndex;
+            if(!e.castOutputIndex(nIndex))
+                continue;
+
+            COutPoint outpoint = COutPoint(mnTxHash, nIndex);
+            if(mPillarCollaterals.count(outpoint) == 0)
+                continue;
+            ans++;
+        }
+        return ans > 0;
+    }
 private:
     std::vector<CMasternodeEntry> entries;
 };

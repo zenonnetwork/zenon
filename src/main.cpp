@@ -5629,18 +5629,6 @@ bool static AlreadyHave(const CInv& inv)
             return true;
         }
         return false;
-    case MSG_BUDGET_FINALIZED_VOTE:
-        if (budget.mapSeenFinalizedBudgetVotes.count(inv.hash)) {
-            masternodeSync.AddedBudgetItem(inv.hash);
-            return true;
-        }
-        return false;
-    case MSG_BUDGET_FINALIZED:
-        if (budget.mapSeenFinalizedBudgets.count(inv.hash)) {
-            masternodeSync.AddedBudgetItem(inv.hash);
-            return true;
-        }
-        return false;
     case MSG_MASTERNODE_ANNOUNCE:
         if (mnodeman.mapSeenMasternodeBroadcast.count(inv.hash)) {
             masternodeSync.AddedMasternodeList(inv.hash);
@@ -5851,26 +5839,6 @@ void static ProcessGetData(CNode* pfrom)
                     }
                 }
 
-                if (!pushed && inv.type == MSG_BUDGET_FINALIZED_VOTE) {
-                    if (budget.mapSeenFinalizedBudgetVotes.count(inv.hash)) {
-                        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
-                        ss.reserve(1000);
-                        ss << budget.mapSeenFinalizedBudgetVotes[inv.hash];
-                        pfrom->PushMessage("fbvote", ss);
-                        pushed = true;
-                    }
-                }
-
-                if (!pushed && inv.type == MSG_BUDGET_FINALIZED) {
-                    if (budget.mapSeenFinalizedBudgets.count(inv.hash)) {
-                        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
-                        ss.reserve(1000);
-                        ss << budget.mapSeenFinalizedBudgets[inv.hash];
-                        pfrom->PushMessage("fbs", ss);
-                        pushed = true;
-                    }
-                }
-
                 if (!pushed && inv.type == MSG_MASTERNODE_ANNOUNCE) {
                     if (mnodeman.mapSeenMasternodeBroadcast.count(inv.hash)) {
                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
@@ -5956,7 +5924,8 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                 !pSporkDB->SporkExists(SPORK_16_ZEROCOIN_MAINTENANCE_MODE) &&
                 !pSporkDB->SporkExists(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_3) &&
 				!pSporkDB->SporkExists(SPORK_22_NEW_PROTOCOL_ENFORCEMENT_4) && 
-                !pSporkDB->SporkExists(SPORK_23_NEW_PROTOCOL_ENFORCEMENT_5);
+                !pSporkDB->SporkExists(SPORK_23_NEW_PROTOCOL_ENFORCEMENT_5) &&
+                !pSporkDB->SporkExists(SPORK_24_NEW_PROTOCOL_ENFORCEMENT_6);
 
         if (fMissingSporks || !fRequestedSporksIDB){
             LogPrintf("asking peer for sporks\n");
@@ -6836,17 +6805,9 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 //       it was the one which was commented out
 int ActiveProtocol()
 {
-    // SPORK_22 is used for 70923 (v.1.4.0)
-    //     if (IsSporkActive(SPORK_22_NEW_PROTOCOL_ENFORCEMENT_4))
-    //            return MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT;
-
-    // SPORK_15 is used for 70924 (v.1.5.0)
-    //if (IsSporkActive(SPORK_15_NEW_PROTOCOL_ENFORCEMENT_2))
-    //  return MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT;
-    
-    // SPORK_23 is used for 70925 (v 1.6.0)
-    if (IsSporkActive(SPORK_23_NEW_PROTOCOL_ENFORCEMENT_5))
-            return MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT;
+    // SPORK_24 is used for 70926 (v 1.6.2)
+    if (IsSporkActive(SPORK_24_NEW_PROTOCOL_ENFORCEMENT_6))
+        return MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT;
 
     return MIN_PEER_PROTO_VERSION_BEFORE_ENFORCEMENT;
 }

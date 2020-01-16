@@ -10,6 +10,7 @@
 #include "amount.h"
 #include "askpassphrasedialog.h"
 #include "masternodelist.h"
+#include "proposallist.h"
 
 #include <QStackedWidget>
 #include <guiinterface.h>
@@ -19,6 +20,7 @@ class ClientModel;
 class OverviewPage;
 class ReceiveCoinsDialog;
 class PrivacyDialog;
+class ProposalList;
 class SendCoinsDialog;
 class SendCoinsRecipient;
 class TransactionView;
@@ -68,6 +70,7 @@ private:
     QWidget* transactionsPage;
     ReceiveCoinsDialog* receiveCoinsPage;
     PrivacyDialog* privacyPage;
+    ProposalList* governancePage;
     SendCoinsDialog* sendCoinsPage;
     BlockExplorer* explorerWindow;
     MasternodeList* masternodeListPage;
@@ -82,6 +85,8 @@ public slots:
     void gotoOverviewPage();
     /** Switch to history (transactions) page */
     void gotoHistoryPage();
+    /** Switch to governance page */
+    void gotoGovernancePage();
     /** Switch to masternode page */
     void gotoMasternodePage();
     /** Switch to explorer page */

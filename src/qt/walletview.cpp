@@ -11,6 +11,7 @@
 #include "bitcoingui.h"
 #include "blockexplorer.h"
 #include "clientmodel.h"
+#include "proposallist.h"
 #include "guiutil.h"
 #include "masternodeconfig.h"
 #include "multisenddialog.h"
@@ -118,12 +119,14 @@ WalletView::WalletView(QWidget* parent) : QStackedWidget(parent),
     transactionsPage->setLayout(vbox);
 
     privacyPage = new PrivacyDialog();
+    governancePage = new ProposalList();
     receiveCoinsPage = new ReceiveCoinsDialog();
     sendCoinsPage = new SendCoinsDialog();
 
     addWidget(overviewPage);
     addWidget(transactionsPage);
     addWidget(privacyPage);
+    addWidget(governancePage);
     addWidget(receiveCoinsPage);
     addWidget(sendCoinsPage);
     addWidget(explorerWindow);
@@ -251,6 +254,10 @@ void WalletView::gotoHistoryPage()
     setCurrentWidget(transactionsPage);
 }
 
+void WalletView::gotoGovernancePage()
+{
+    setCurrentWidget(governancePage);
+}
 
 void WalletView::gotoBlockExplorerPage()
 {

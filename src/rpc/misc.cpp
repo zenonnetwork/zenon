@@ -172,11 +172,9 @@ UniValue mnsync(const UniValue& params, bool fHelp)
             "  \"sumMasternodeList\": n,        (numeric) Number of MN list messages (total)\n"
             "  \"sumMasternodeWinner\": n,      (numeric) Number of MN winner messages (total)\n"
             "  \"sumBudgetItemProp\": n,        (numeric) Number of MN budget messages (total)\n"
-            "  \"sumBudgetItemFin\": n,         (numeric) Number of MN budget finalization messages (total)\n"
             "  \"countMasternodeList\": n,      (numeric) Number of MN list messages (local)\n"
             "  \"countMasternodeWinner\": n,    (numeric) Number of MN winner messages (local)\n"
             "  \"countBudgetItemProp\": n,      (numeric) Number of MN budget messages (local)\n"
-            "  \"countBudgetItemFin\": n,       (numeric) Number of MN budget finalization messages (local)\n"
             "  \"RequestedMasternodeAssets\": n, (numeric) Status code of last sync phase\n"
             "  \"RequestedMasternodeAttempt\": n, (numeric) Status code of last sync attempt\n"
             "}\n"
@@ -200,11 +198,9 @@ UniValue mnsync(const UniValue& params, bool fHelp)
         obj.push_back(Pair("sumMasternodeList", masternodeSync.sumMasternodeList));
         obj.push_back(Pair("sumMasternodeWinner", masternodeSync.sumMasternodeWinner));
         obj.push_back(Pair("sumBudgetItemProp", masternodeSync.sumBudgetItemProp));
-        obj.push_back(Pair("sumBudgetItemFin", masternodeSync.sumBudgetItemFin));
         obj.push_back(Pair("countMasternodeList", masternodeSync.countMasternodeList));
         obj.push_back(Pair("countMasternodeWinner", masternodeSync.countMasternodeWinner));
         obj.push_back(Pair("countBudgetItemProp", masternodeSync.countBudgetItemProp));
-        obj.push_back(Pair("countBudgetItemFin", masternodeSync.countBudgetItemFin));
         obj.push_back(Pair("RequestedMasternodeAssets", masternodeSync.RequestedMasternodeAssets));
         obj.push_back(Pair("RequestedMasternodeAttempt", masternodeSync.RequestedMasternodeAttempt));
 

@@ -107,11 +107,8 @@ static const CRPCConvertParam vRPCConvertParams[] =
         {"spork", 1},
         {"preparebudget", 2},
         {"preparebudget", 3},
-        {"preparebudget", 5},
         {"submitbudget", 2},
         {"submitbudget", 3},
-        {"submitbudget", 5},
-        {"submitbudget", 7},
         // disabled until removal of the legacy 'masternode' command
         //{"startmasternode", 1},
         {"mnvoteraw", 1},

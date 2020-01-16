@@ -44,6 +44,8 @@ QT_FORMS_UI = \
   qt/forms/coincontroldialog.ui \
   qt/forms/blockexplorer.ui \
   qt/forms/editaddressdialog.ui \
+  qt/forms/proposallist.ui \
+  qt/forms/proposaldialog.ui \
   qt/forms/helpmessagedialog.ui \
   qt/forms/intro.ui \
   qt/forms/masternodelist.ui \
@@ -81,6 +83,9 @@ QT_MOC_CPP = \
   qt/moc_coincontroltreewidget.cpp \
   qt/moc_csvmodelwriter.cpp \
   qt/moc_editaddressdialog.cpp \
+  qt/moc_proposaltablemodel.cpp \
+  qt/moc_proposaldialog.cpp \
+  qt/moc_proposallist.cpp \
   qt/moc_guiutil.cpp \
   qt/moc_intro.cpp \
   qt/moc_macdockiconhandler.cpp \
@@ -155,6 +160,10 @@ BITCOIN_QT_H = \
   qt/coincontroltreewidget.h \
   qt/csvmodelwriter.h \
   qt/editaddressdialog.h \
+  qt/proposaldialog.h \
+  qt/proposallist.h \
+  qt/proposalrecord.h \
+  qt/proposaltablemodel.h \
   qt/guiconstants.h \
   qt/guiutil.h \
   qt/intro.h \
@@ -246,6 +255,10 @@ RES_ICONS = \
   qt/res/icons/privacy.svg \
   qt/res/icons/remove.svg \
   qt/res/icons/send.svg \
+  qt/res/icons/governance.svg \
+  qt/res/icons/yesvote.svg \
+  qt/res/icons/novote.svg \
+  qt/res/icons/abstainvote.svg \
   qt/res/icons/staking_active.svg \
   qt/res/icons/staking_inactive.svg \
   qt/res/icons/synced.svg \
@@ -303,6 +316,10 @@ BITCOIN_QT_WALLET_CPP = \
   qt/coincontroldialog.cpp \
   qt/coincontroltreewidget.cpp \
   qt/editaddressdialog.cpp \
+  qt/proposaldialog.cpp \
+  qt/proposallist.cpp \
+  qt/proposalrecord.cpp \
+  qt/proposaltablemodel.cpp \
   qt/masternodelist.cpp \
   qt/multisenddialog.cpp \
   qt/multisigdialog.cpp\

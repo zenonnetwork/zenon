@@ -315,6 +315,8 @@ void MasternodeList::updateMyNodeList(bool fForce)
     mnodeman.CountNetworks(ActiveProtocol(), ipv4, ipv6, onion);
     ui->pillarsCount->setStyleSheet("font-size:14pt; color: #6FF34D; font-weight:600");
     ui->pillarsCount->setText(QString::number(mnodeman.pillar_count()));
+    ui->pillarSlots->setStyleSheet("font-size:14pt; color: #6FF34D; font-weight:600");
+    ui->pillarSlots->setText(QString::number(mnodeman.pillar_slots()));
 }
 
 void MasternodeList::on_startButton_clicked()

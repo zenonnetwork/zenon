@@ -144,12 +144,24 @@ public:
     void ProcessMessage(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
 
     // return the number of active pillars
-    int pillar_count(){
+    int pillar_count(int protocolVersion = -1){
         int count = 0;
-        for(int i = 0; i < (int)vMasternodes.size(); i++)
-            if(vMasternodes[i].isPillar)
+        protocolVersion = protocolVersion == -1 ? ActiveProtocol() : protocolVersion;
+        for(CMasternode& mn : vMasternodes){
+            if(mn.protocolVersion < protocolVersion || !mn.IsEnabled()) 
+                continue;
+            if(mn.isPillar)
                 count++;
+        }
         return count;
+    }
+    
+    int pillar_slots(){
+        return vPillarCollaterals.size() < MAX_PILLARS_ALLOWED ? MAX_PILLARS_ALLOWED - vPillarCollaterals.size() : 0;
+    }
+    
+    bool isPillar(COutPoint vout){
+        return mPillarCollaterals.count(vout) > 0;
     }
 
     /// Return the number of (unique) Masternodes and Pillars

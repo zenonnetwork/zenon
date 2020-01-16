@@ -74,11 +74,9 @@ void CMasternodeSync::Reset()
     sumMasternodeList = 0;
     sumMasternodeWinner = 0;
     sumBudgetItemProp = 0;
-    sumBudgetItemFin = 0;
     countMasternodeList = 0;
     countMasternodeWinner = 0;
     countBudgetItemProp = 0;
-    countBudgetItemFin = 0;
     RequestedMasternodeAssets = MASTERNODE_SYNC_INITIAL;
     RequestedMasternodeAttempt = 0;
     nAssetSyncStarted = GetTime();
@@ -112,8 +110,7 @@ void CMasternodeSync::AddedMasternodeWinner(uint256 hash)
 
 void CMasternodeSync::AddedBudgetItem(uint256 hash)
 {
-    if (budget.mapSeenMasternodeBudgetProposals.count(hash) || budget.mapSeenMasternodeBudgetVotes.count(hash) ||
-        budget.mapSeenFinalizedBudgets.count(hash) || budget.mapSeenFinalizedBudgetVotes.count(hash)) {
+    if (budget.mapSeenMasternodeBudgetProposals.count(hash) || budget.mapSeenMasternodeBudgetVotes.count(hash)) {
         if (mapSeenSyncBudget[hash] < MASTERNODE_SYNC_THRESHOLD) {
             lastBudgetItem = GetTime();
             mapSeenSyncBudget[hash]++;
@@ -127,11 +124,6 @@ void CMasternodeSync::AddedBudgetItem(uint256 hash)
 bool CMasternodeSync::IsBudgetPropEmpty()
 {
     return sumBudgetItemProp == 0 && countBudgetItemProp > 0;
-}
-
-bool CMasternodeSync::IsBudgetFinEmpty()
-{
-    return sumBudgetItemFin == 0 && countBudgetItemFin > 0;
 }
 
 void CMasternodeSync::GetNextAsset()
@@ -192,26 +184,21 @@ void CMasternodeSync::ProcessMessage(CNode* pfrom, std::string& strCommand, CDat
 
         //this means we will receive no further communication
         switch (nItemID) {
-        case (MASTERNODE_SYNC_LIST):
-            if (nItemID != RequestedMasternodeAssets) return;
-            sumMasternodeList += nCount;
-            countMasternodeList++;
-            break;
-        case (MASTERNODE_SYNC_MNW):
-            if (nItemID != RequestedMasternodeAssets) return;
-            sumMasternodeWinner += nCount;
-            countMasternodeWinner++;
-            break;
-        case (MASTERNODE_SYNC_BUDGET_PROP):
-            if (RequestedMasternodeAssets != MASTERNODE_SYNC_BUDGET) return;
-            sumBudgetItemProp += nCount;
-            countBudgetItemProp++;
-            break;
-        case (MASTERNODE_SYNC_BUDGET_FIN):
-            if (RequestedMasternodeAssets != MASTERNODE_SYNC_BUDGET) return;
-            sumBudgetItemFin += nCount;
-            countBudgetItemFin++;
-            break;
+            case (MASTERNODE_SYNC_LIST):
+                if (nItemID != RequestedMasternodeAssets) return;
+                sumMasternodeList += nCount;
+                countMasternodeList++;
+                break;
+            case (MASTERNODE_SYNC_MNW):
+                if (nItemID != RequestedMasternodeAssets) return;
+                sumMasternodeWinner += nCount;
+                countMasternodeWinner++;
+                break;
+            case (MASTERNODE_SYNC_BUDGET):
+                if (nItemID != RequestedMasternodeAssets) return;
+                sumBudgetItemProp += nCount;
+                countBudgetItemProp++;
+                break;
         }
 
         LogPrint("masternode", "CMasternodeSync:ProcessMessage - ssc - got inventory count %d %d\n", nItemID, nCount);

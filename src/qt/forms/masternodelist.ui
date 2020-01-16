@@ -123,10 +123,36 @@
                   <item alignment="Qt::AlignVCenter">
                    <widget class="QLabel" name="label">
                     <property name="text">
-                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:13pt; color:#6ff34d;&quot;&gt;active Pillars in the network&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot;font-size:13pt; color:#6ff34d;&quot;&gt;active Pillars in the network and&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="textInteractionFlags">
                      <set>Qt::NoTextInteraction</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="pillarSlots">
+                    <property name="enabled">
+                     <bool>true</bool>
+                    </property>
+                    <property name="mouseTracking">
+                     <bool>true</bool>
+                    </property>
+                    <property name="styleSheet">
+                     <string notr="true">color: #6FF34D; font-size: 13pt;</string>
+                    </property>
+                    <property name="text">
+                     <string>0</string>
+                    </property>
+                    <property name="textInteractionFlags">
+                     <set>Qt::NoTextInteraction</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="label_2">
+                    <property name="text">
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot;font-size:13pt; color:#6ff34d;&quot;&gt;slots available&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                    </widget>
                   </item>
@@ -300,7 +326,7 @@
                     </property>
                    </widget>
                   </item>
-                    <item>
+                  <item>
                    <widget class="QPushButton" name="getOutputsPillarButton">
                     <property name="text">
                      <string>Get Pillar outputs</string>
@@ -325,8 +351,8 @@
                    <widget class="QPushButton" name="startMissingButton">
                     <property name="minimumSize">
                      <size>
-                      <width>131</width>
-                      <height>32</height>
+                      <width>0</width>
+                      <height>0</height>
                      </size>
                     </property>
                     <property name="text">
