@@ -8,6 +8,7 @@
 #include "addrman.h"
 #include "masternodeman.h"
 #include "obfuscation.h"
+#include "spork.h"
 #include "sync.h"
 #include "util.h"
 
@@ -215,7 +216,7 @@ void CMasternode::Check(bool forceCheck)
         CMutableTransaction tx = CMutableTransaction();
         CTxOut vout;
         
-        if(mPillarCollaterals.count(vin.prevout) > 0){
+        if(mnodeman.IsPillar(vin.prevout)){
             vout = CTxOut(MNP2 * COIN, obfuScationPool.collateralPubKey);
         }else{
             vout = CTxOut(MNA2 * COIN, obfuScationPool.collateralPubKey);
@@ -594,7 +595,7 @@ bool CMasternodeBroadcast::CheckInputsAndAdd(int& nDoS)
     CMutableTransaction tx = CMutableTransaction();
     CTxOut vout;
     
-    if(mPillarCollaterals.count(vin.prevout) > 0){
+    if(mnodeman.IsPillar(vin.prevout)){
         vout = CTxOut(MNP2 * COIN, obfuScationPool.collateralPubKey);
     }else{
         vout = CTxOut(MNA2 * COIN, obfuScationPool.collateralPubKey);
@@ -650,7 +651,8 @@ bool CMasternodeBroadcast::CheckInputsAndAdd(int& nDoS)
     mnodeman.Add(mn);
 
     // if it matches our Masternode privkey, then we've been remotely activated
-    if (pubKeyMasternode == activeMasternode.pubKeyMasternode && protocolVersion == PROTOCOL_VERSION) {
+    if (pubKeyMasternode == activeMasternode.pubKeyMasternode && (protocolVersion == PROTOCOL_VERSION ||
+            ((mn.protocolVersion == MIN_PEER_PROTO_VERSION_BEFORE_ENFORCEMENT) && IsSporkActive(SPORK_14_NEW_PROTOCOL_ENFORCEMENT) == 0))) {
         activeMasternode.EnableHotColdMasterNode(vin, addr);
     }
 
@@ -692,10 +694,10 @@ bool CMasternodeBroadcast::Sign(CKey& keyCollateralAddress)
 bool CMasternodeBroadcast::VerifySignature()
 {
     std::string errorMessage;
-
     if(!obfuScationSigner.VerifyMessage(pubKeyCollateralAddress, sig, GetNewStrMessage(), errorMessage)
-            && !obfuScationSigner.VerifyMessage(pubKeyCollateralAddress, sig, GetOldStrMessage(), errorMessage))
+            && !obfuScationSigner.VerifyMessage(pubKeyCollateralAddress, sig, GetOldStrMessage(), errorMessage)){
         return error("CMasternodeBroadcast::VerifySignature() - Error: %s", errorMessage);
+        }
 
     return true;
 }
@@ -749,7 +751,6 @@ bool CMasternodePing::Sign(CKey& keyMasternode, CPubKey& pubKeyMasternode)
         LogPrint("masternode","CMasternodePing::Sign() - Error: %s\n", errorMessage);
         return false;
     }
-
     if (!obfuScationSigner.VerifyMessage(pubKeyMasternode, vchSig, strMessage, errorMessage)) {
         LogPrint("masternode","CMasternodePing::Sign() - Error: %s\n", errorMessage);
         return false;
@@ -762,7 +763,6 @@ bool CMasternodePing::VerifySignature(CPubKey& pubKeyMasternode, int &nDos)
 {
     std::string strMessage = vin.ToString() + blockHash.ToString() + std::to_string(sigTime);
 	std::string errorMessage = "";
-
 	if(!obfuScationSigner.VerifyMessage(pubKeyMasternode, vchSig, strMessage, errorMessage)){
 		nDos = 33;
 		return error("CMasternodePing::VerifySignature - Got bad Masternode ping signature %s Error: %s", vin.ToString(), errorMessage);
@@ -772,13 +772,13 @@ bool CMasternodePing::VerifySignature(CPubKey& pubKeyMasternode, int &nDos)
 
 bool CMasternodePing::CheckAndUpdate(int& nDos, bool fRequireEnabled, bool fCheckSigTimeOnly)
 {
-    if (sigTime > GetAdjustedTime() + 60 * 60) {
+    if (sigTime > GetAdjustedTime() + 2 * 60 * 60) {
         LogPrint("masternode","CMasternodePing::CheckAndUpdate - Signature rejected, too far into the future %s\n", vin.prevout.hash.ToString());
         nDos = 1;
         return false;
     }
 
-    if (sigTime <= GetAdjustedTime() - 60 * 60) {
+    if (sigTime <= GetAdjustedTime() - 2 * 60 * 60) {
         LogPrint("masternode","CMasternodePing::CheckAndUpdate - Signature rejected, too far into the past %s - %d %d \n", vin.prevout.hash.ToString(), sigTime, GetAdjustedTime());
         nDos = 1;
         return false;

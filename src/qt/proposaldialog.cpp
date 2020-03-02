@@ -186,10 +186,10 @@ bool ProposalDialog::validateProposal() {
     if (!masternodeSync.IsBlockchainSynced()) strError = "Must wait for client to sync with network. Try again in a minute or so.";
 
     std::string strProposalName = SanitizeString(ui->nameEdit->text().toStdString());
-    if (strProposalName.size() < 5 || strProposalName.size() > 20) strError = "Invalid proposal name, it must be between 5 and 20 characters.";
+    if (strProposalName.size() < 5 || strProposalName.size() > 60) strError = "Invalid proposal name, it must be between 5 and 60 characters.";
 
     std::string strURL = SanitizeString(ui->urlEdit->text().toStdString());
-    if (strURL.size() < 11 || strURL.size() > 64) strError = "Invalid url, must be between 11 and 64 characters.";
+    if (strURL.size() < 11 || strURL.size() > 250) strError = "Invalid url, must be between 11 and 250 characters.";
     if(!(strURL.find("http://") == std::string::npos || strURL.find("https://") == std::string::npos)) strError = "Invalid url, must contain http:// or https:// .";
 
     int nBlockStart = ui->blockStart->text().toInt();

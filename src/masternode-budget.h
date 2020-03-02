@@ -26,6 +26,7 @@ class CBudgetProposalBroadcast;
 #define VOTE_ABSTAIN 0
 #define VOTE_YES 1
 #define VOTE_NO 2
+#define VOTE_DELETE 3
 
 enum class TrxValidationStatus {
     InValid,         /** Transaction verification failed */
@@ -73,6 +74,7 @@ public:
         std::string ret = "ABSTAIN";
         if (nVote == VOTE_YES) ret = "YES";
         if (nVote == VOTE_NO) ret = "NO";
+        if (nVote == VOTE_DELETE) ret = "DELETE";
         return ret;
     }
 
@@ -281,8 +283,8 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
     {
         //for syncing with other clients
-        READWRITE(LIMITED_STRING(strProposalName, 20));
-        READWRITE(LIMITED_STRING(strURL, 64));
+        READWRITE(LIMITED_STRING(strProposalName, 60));
+        READWRITE(LIMITED_STRING(strURL, 250));
         READWRITE(nTime);
         READWRITE(nBlockStart);
         READWRITE(nBlockEnd);
@@ -337,8 +339,8 @@ public:
     {
         //for syncing with other clients
 
-        READWRITE(LIMITED_STRING(strProposalName, 20));
-        READWRITE(LIMITED_STRING(strURL, 64));
+        READWRITE(LIMITED_STRING(strProposalName, 60));
+        READWRITE(LIMITED_STRING(strURL, 250));
         READWRITE(nTime);
         READWRITE(nBlockStart);
         READWRITE(nBlockEnd);

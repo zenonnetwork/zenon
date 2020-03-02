@@ -193,6 +193,22 @@ void ProposalList::vote_click_handler(const std::string voteString)
         return;
 
     QString proposalName = selection.at(0).data(ProposalTableModel::ProposalRole).toString();
+    int startBlock = selection.at(0).data(ProposalTableModel::StartDateRole).toInt();
+    int endBlock = selection.at(0).data(ProposalTableModel::EndDateRole).toInt();
+
+    if(startBlock > chainActive.Height() || endBlock < chainActive.Height()) {
+        QMessageBox::information(this, tr("Error voting"),
+            tr("The proposal is available for voting between blocks %1 and %2.").arg(QString::number(startBlock), QString::number(endBlock)));
+
+        return;
+    }
+
+    if(!masternodeConfig.isPillarOwner()) {
+        QMessageBox::information(this, tr("Error voting"),
+            tr("Only Pillar owners can vote."));
+
+        return;
+    }
 
     QMessageBox::StandardButton retval = QMessageBox::question(this, tr("Confirm vote"),
         tr("Are you sure you want to vote <strong>%1</strong> on the proposal <strong>%2</strong>?").arg(QString::fromStdString(voteString), proposalName),
@@ -231,7 +247,7 @@ void ProposalList::vote_click_handler(const std::string voteString)
             }
 
             CMasternode* pmn = mnodeman.Find(pubKeyMasternode);
-            if (pmn == NULL || mPillarCollaterals.count(pmn -> vin.prevout) == 0) 
+            if (pmn == NULL || mnodeman.IsPillar(pmn -> vin.prevout) == 0) 
             {
                 failed++;
                 continue;

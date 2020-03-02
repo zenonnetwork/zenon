@@ -135,14 +135,9 @@ void MasternodeList::StartAlias(std::string strAlias)
             int nIndex;
             mne.castOutputIndex(nIndex);
             COutPoint current_outpoint(uint256S(mne.getTxHash()), nIndex);
-            for(int i = 0; i < (int)vPillarCollaterals.size(); i++){
-                if(vPillarCollaterals[i].first == current_outpoint){
-                    if((i + 1) > MAX_PILLARS_ALLOWED){
-                        fSuccess = false;
-                        strStatusHtml += "<br> Failed to start pillar. There are no slots available.<br>";
-                    }
-                    break;
-                }
+            if(mnodeman.CanBePillar(current_outpoint) == 0){
+                fSuccess = false;
+                strStatusHtml += "<br> Failed to start pillar. There are no slots available.<br>";
             }
             if(!fSuccess)
                 break;
@@ -191,15 +186,10 @@ void MasternodeList::StartAll(std::string strCommand)
         bool fSuccess = true;
         mne.castOutputIndex(nIndex);
         COutPoint current_outpoint(uint256S(mne.getTxHash()), nIndex);
-        for(int i = 0; i < (int)vPillarCollaterals.size(); i++){
-            if(vPillarCollaterals[i].first == current_outpoint){
-                if((i + 1) > MAX_PILLARS_ALLOWED){
-                    fSuccess = false;
-                    strFailedHtml += "<br> Failed to start " + mne.getAlias() + ". There are no slots available. <br>";
-                    nCountFailed++;
-                }
-                break;
-            }
+        if(mnodeman.CanBePillar(current_outpoint) == 0){
+            fSuccess = false;
+            strFailedHtml += "<br> Failed to start " + mne.getAlias() + ". There are no slots available. <br>";
+            nCountFailed++;
         }
 
         if(!fSuccess)
@@ -314,9 +304,9 @@ void MasternodeList::updateMyNodeList(bool fForce)
     }
     mnodeman.CountNetworks(ActiveProtocol(), ipv4, ipv6, onion);
     ui->pillarsCount->setStyleSheet("font-size:14pt; color: #6FF34D; font-weight:600");
-    ui->pillarsCount->setText(QString::number(mnodeman.pillar_count()));
+    ui->pillarsCount->setText(QString::number(mnodeman.PillarCount()));
     ui->pillarSlots->setStyleSheet("font-size:14pt; color: #6FF34D; font-weight:600");
-    ui->pillarSlots->setText(QString::number(mnodeman.pillar_slots()));
+    ui->pillarSlots->setText(QString::number(mnodeman.PillarSlots()));
 }
 
 void MasternodeList::on_startButton_clicked()

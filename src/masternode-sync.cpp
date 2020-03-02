@@ -223,7 +223,7 @@ void CMasternodeSync::Process()
     static int tick = 0;
 
     if (tick++ % MASTERNODE_SYNC_TIMEOUT != 0) return;
-
+    
     if (IsSynced()) {
         /* 
             Resync if we lose all masternodes from sleep/wake or failure to sync originally

@@ -1770,17 +1770,9 @@ bool AppInit2()
     }
 
     // ********************************************************* Step 10: setup ObfuScation
-
-	uiInterface.InitMessage(_("Initializing Pillars"));
-    // get all utxo and also init MAX_PILLARS_ALLOWED in the same iteration
-    
-    if(!InitPillars()){
-        LogPrintf("Pillars did not initialize correctly!\n");
-        return InitError("Pillars did not initialize correctly!");
-    }
-
     CMasternodeDB mndb;
     CMasternodeDB::ReadResult readResult = mndb.Read(mnodeman);
+
     if (readResult == CMasternodeDB::FileError)
         LogPrintf("Missing masternode cache file - mncache.dat, will try to recreate\n");
     else if (readResult != CMasternodeDB::Ok) {
@@ -1789,6 +1781,14 @@ bool AppInit2()
             LogPrintf("magic is ok but data has invalid format, will try to recreate\n");
         else
             LogPrintf("file format is unknown or invalid, please fix it manually\n");
+    }
+
+	uiInterface.InitMessage(_("Initializing Pillars"));
+    // get all utxo and also init MAX_PILLARS_ALLOWED in the same iteration
+    
+    if(!mnodeman.InitPillars()){
+        LogPrintf("Pillars did not initialize correctly!\n");
+        return InitError("Pillars did not initialize correctly!");
     }
 
     //uiInterface.InitMessage(_("Loading budget cache..."));

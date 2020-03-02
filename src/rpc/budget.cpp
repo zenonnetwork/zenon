@@ -44,7 +44,7 @@ void checkBudgetInputs(const UniValue& params, std::string &strProposalName, std
                        int &nBlockStart, int &nBlockEnd)
 {
     strProposalName = SanitizeString(params[0].get_str());
-    if (strProposalName.size() > 20)
+    if (strProposalName.size() > 60)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid proposal name, limit of 20 characters.");
 
     strURL = SanitizeString(params[1].get_str());
@@ -237,10 +237,15 @@ UniValue mnbudgetvote(const UniValue& params, bool fHelp)
     uint256 hash = ParseHashV(params[1], "parameter 1");
     std::string strVote = params[2].get_str();
 
-    if (strVote != "yes" && strVote != "no") return "You can only vote 'yes' or 'no'";
+    if (strVote != "yes" && strVote != "no" && strVote != "delete") return "You can only vote 'yes' or 'no'";
     int nVote = VOTE_ABSTAIN;
     if (strVote == "yes") nVote = VOTE_YES;
     if (strVote == "no") nVote = VOTE_NO;
+    if (strVote == "delete") {
+        nVote = VOTE_DELETE;
+        if(strCommand != "local")
+            return "Not possible";
+    }    
 
     int success = 0;
     int failed = 0;
@@ -277,7 +282,7 @@ UniValue mnbudgetvote(const UniValue& params, bool fHelp)
             }
 
             CMasternode* pmn = mnodeman.Find(activeMasternode.vin);
-            if (pmn == NULL || mPillarCollaterals.count(pmn -> vin.prevout) == 0) {
+            if (pmn == NULL || mnodeman.IsPillar(pmn -> vin.prevout) == 0) {
                 failed++;
                 statusObj.push_back(Pair("node", "local"));
                 statusObj.push_back(Pair("result", "failed"));
@@ -287,15 +292,41 @@ UniValue mnbudgetvote(const UniValue& params, bool fHelp)
             }
 
             CBudgetVote vote(activeMasternode.vin, hash, nVote);
-            if (!vote.Sign(keyMasternode, pubKeyMasternode)) {
-                failed++;
-                statusObj.push_back(Pair("node", "local"));
-                statusObj.push_back(Pair("result", "failed"));
-                statusObj.push_back(Pair("error", "Failure to sign."));
-                resultsObj.push_back(statusObj);
-                break;
-            }
 
+            if(strVote == "delete"){
+                if (!mapArgs.count("-sporkkey")){
+                    LogPrint("mnbudget","CBudgetProposal::Sign - Error missing sporkkey");
+                    return false;
+                }
+
+                std::string spork_key = GetArg("-sporkkey", "");
+                CKey key;
+                CPubKey pub_key(ParseHex(Params().SporkKey()));
+
+                std::string errorMessage;
+
+                if (!obfuScationSigner.SetKey(spork_key, errorMessage, key, pub_key)) {
+                    LogPrint("mnbudget","CBudgetProposal::Sign - Error upon calling SetKey: %s\n", errorMessage);
+                    return false;
+                }
+                if(!vote.Sign(key, pub_key)){
+                    failed++;
+                    statusObj.push_back(Pair("node", "local"));
+                    statusObj.push_back(Pair("result", "failed"));
+                    statusObj.push_back(Pair("error", "Failure to sign."));
+                    resultsObj.push_back(statusObj);
+                    break;
+                }
+            }else{
+                if (!vote.Sign(keyMasternode, pubKeyMasternode)) {
+                    failed++;
+                    statusObj.push_back(Pair("node", "local"));
+                    statusObj.push_back(Pair("result", "failed"));
+                    statusObj.push_back(Pair("error", "Failure to sign."));
+                    resultsObj.push_back(statusObj);
+                    break;
+                }
+            }
             std::string strError = "";
             if (budget.UpdateProposal(vote, NULL, strError)) {
                 success++;
@@ -344,7 +375,7 @@ UniValue mnbudgetvote(const UniValue& params, bool fHelp)
             }
 
             CMasternode* pmn = mnodeman.Find(pubKeyMasternode);
-            if (pmn == NULL || mPillarCollaterals.count(pmn -> vin.prevout) == 0) {
+            if (pmn == NULL || mnodeman.IsPillar(pmn -> vin.prevout) == 0) {
                 failed++;
                 statusObj.push_back(Pair("node", mne.getAlias()));
                 statusObj.push_back(Pair("result", "failed"));
@@ -418,7 +449,7 @@ UniValue mnbudgetvote(const UniValue& params, bool fHelp)
             }
 
             CMasternode* pmn = mnodeman.Find(pubKeyMasternode);
-            if(pmn == NULL || mPillarCollaterals.count(pmn -> vin.prevout) == 0)
+            if(pmn == NULL || mnodeman.IsPillar(pmn -> vin.prevout) == 0)
             {
                 failed++;
                 statusObj.push_back(Pair("node", mne.getAlias()));
@@ -638,7 +669,7 @@ UniValue mnbudgetrawvote(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Malformed base64 encoding");
 
     CMasternode* pmn = mnodeman.Find(vin);
-    if (pmn == NULL || mPillarCollaterals.count(pmn -> vin.prevout) == 0) {
+    if (pmn == NULL || mnodeman.IsPillar(pmn -> vin.prevout) == 0) {
         return "Failure to find pillar in list : " + vin.ToString();
     }
 

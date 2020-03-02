@@ -37,21 +37,17 @@ void CActiveMasternode::ManageStatus()
         pmn = mnodeman.Find(pubKeyMasternode);
         if (pmn != NULL) {
             pmn->Check();
-            
-            
+                
             //check before activating a pillar
-            for(int i = 0; i < (int)vPillarCollaterals.size(); i++){
-                if(vPillarCollaterals[i].first == pmn -> vin.prevout){
-                    if((i + 1) > MAX_PILLARS_ALLOWED){
-                        status = ACTIVE_MASTERNODE_NOT_CAPABLE;
-                        notCapableReason = "There are no slots available for pillars!";
-                        return;
-                    }
-                    break;
-                }
+            if(mnodeman.CanBePillar(pmn -> vin.prevout) == 0){
+                status = ACTIVE_MASTERNODE_NOT_CAPABLE;
+                notCapableReason = "There are no slots available for pillars!";
+                return;
             }
 
-            if (pmn->IsEnabled() && pmn->protocolVersion == PROTOCOL_VERSION) EnableHotColdMasterNode(pmn->vin, pmn->addr);
+            if (pmn->IsEnabled() && (pmn->protocolVersion == PROTOCOL_VERSION || 
+                    ((pmn->protocolVersion == MIN_PEER_PROTO_VERSION_BEFORE_ENFORCEMENT) && IsSporkActive(SPORK_14_NEW_PROTOCOL_ENFORCEMENT) == 0))) 
+                EnableHotColdMasterNode(pmn->vin, pmn->addr);
         }
     }
 

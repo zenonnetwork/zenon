@@ -4734,26 +4734,21 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex, 
                     CTxOut temp_vout = current_txs[i].vout[j];
                     if(temp_vout.nValue == MNP * COIN){
                         if(pindex -> nHeight <= PLI_END)
-                            MAX_PILLARS_ALLOWED++;
+                            mnodeman.IncrementMaxPillarsAllowed();
                         
                         COutPoint temp_outpoint(current_txs[i].GetHash(), j);
-                        vPillarCollaterals.push_back(std::make_pair(temp_outpoint, std::make_pair(pindex -> nHeight, i)));
-                        mPillarCollaterals.insert(std::make_pair(temp_outpoint, std::make_pair(pindex -> nHeight, i)));
+                        mnodeman.AddPillarUtxo(temp_outpoint, std::make_pair(pindex -> nHeight, i));
                     }
                 }
                 for(int j = 0; j < (int)current_txs[i].vin.size(); j++)
-                    if(mPillarCollaterals.count(current_txs[i].vin[j].prevout) > 0){
+                    if(mnodeman.IsPillar(current_txs[i].vin[j].prevout)){
                         if(pindex -> nHeight <= PLI_END)
-                            MAX_PILLARS_ALLOWED--;
+                            mnodeman.DecrementMaxPillarsAllowed();
                         
-                        mPillarCollaterals.erase(current_txs[i].vin[j].prevout);
-                        for(int k = 0; k < (int)vPillarCollaterals.size(); k++)
-                            if(vPillarCollaterals[k].first == current_txs[i].vin[j].prevout){
-                                vPillarCollaterals.erase(vPillarCollaterals.begin() + k);
-                                break;
-                            }
+                        mnodeman.DeletePillarUtxo(current_txs[i].vin[j].prevout);
                     }
             }
+            mnodeman.UpdateLastScannedBlock(pindex -> nHeight);
         }
     } catch (std::runtime_error& e) {
         return state.Abort(std::string("System error: ") + e.what());
@@ -5920,6 +5915,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
         // Zenon: We use certain sporks during IBD, so check to see if they are
         // available. If not, ask the first peer connected for them.
         bool fMissingSporks = !pSporkDB->SporkExists(SPORK_14_NEW_PROTOCOL_ENFORCEMENT) &&
+                !pSporkDB->SporkExists(SPORK_14_NEW_VOTING_ENFORCEMENT) &&
                 !pSporkDB->SporkExists(SPORK_15_NEW_PROTOCOL_ENFORCEMENT_2) &&
                 !pSporkDB->SporkExists(SPORK_16_ZEROCOIN_MAINTENANCE_MODE) &&
                 !pSporkDB->SporkExists(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_3) &&
@@ -6805,8 +6801,8 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 //       it was the one which was commented out
 int ActiveProtocol()
 {
-    // SPORK_24 is used for 70926 (v 1.6.2)
-    if (IsSporkActive(SPORK_24_NEW_PROTOCOL_ENFORCEMENT_6))
+    // SPORK_14 is used for 70927 (v 1.6.3)
+    if (IsSporkActive(SPORK_14_NEW_PROTOCOL_ENFORCEMENT))
         return MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT;
 
     return MIN_PEER_PROTO_VERSION_BEFORE_ENFORCEMENT;
@@ -7225,70 +7221,3 @@ public:
         mapOrphanTransactionsByPrev.clear();
     }
 } instance_of_cmaincleanup;
-
-///////
-/// pli section start
-
-struct less_than_key{
-    inline bool operator() (const std::pair<COutPoint, std::pair<int, int> >& a, const std::pair<COutPoint, std::pair<int, int> >& b){
-        if(a.second.first == b.second.first){ // nBlockHeight
-            if(a.second.second == b.second.second) // same tx index
-                return a.first.n < b.first.n;
-            return a.second.second < b.second.second;
-        }
-        
-        return a.second.first < b.second.first;
-    }
-};
-
-unsigned int MAX_PILLARS_ALLOWED;
-std::vector<std::pair<COutPoint, std::pair<int, int> > > vPillarCollaterals;
-std::unordered_map<COutPoint, std::pair<int, int>, hash_by_outpoint> mPillarCollaterals;
-
-bool InitPillars(){
-    LOCK(cs_main);
-
-    int left = PLI_START;
-    while(left <= chainActive.Height()){
-        CBlockIndex* block_index = chainActive[left];
-        CBlock current_block;
-        if(ReadBlockFromDisk(current_block, block_index)){
-            int tx_count = 0;
-            for(const CTransaction& current_tx: current_block.vtx){
-                int n = 0;
-                for(const CTxOut current_vout: current_tx.vout){
-                    if(current_vout.nValue == MNP * COIN){
-                        if(left <= PLI_END){
-                            MAX_PILLARS_ALLOWED++;
-                        }
-                        COutPoint temp_outpoint(current_tx.GetHash(), n);
-                        mPillarCollaterals.insert(std::make_pair(temp_outpoint, std::make_pair(left, tx_count)));
-                    }
-                    n++;
-                }
-                for(const CTxIn current_vin : current_tx.vin){
-                    if(mPillarCollaterals.count(current_vin.prevout) > 0){
-                        if(left <= PLI_END){
-                            MAX_PILLARS_ALLOWED--;
-                        }
-                        mPillarCollaterals.erase(current_vin.prevout);
-                    }
-                }
-                tx_count++;
-            }
-        }else{
-            return false;
-        }
-        left++;
-    }
-    for(auto& itr: mPillarCollaterals){
-        vPillarCollaterals.push_back(std::make_pair(COutPoint(itr.first), itr.second));
-    }
-
-    std::sort(vPillarCollaterals.begin(), vPillarCollaterals.end(), less_than_key());
-
-    return true;
-}
-
-/// pli section end
-///////////////////

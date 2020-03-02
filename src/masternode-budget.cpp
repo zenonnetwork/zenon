@@ -14,6 +14,7 @@
 #include "masternode.h"
 #include "masternodeman.h"
 #include "obfuscation.h"
+#include "spork.h"
 #include "util.h"
 #include <boost/filesystem.hpp>
 
@@ -616,10 +617,9 @@ void CBudgetManager::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
             LogPrint("mnbudget","mvote - unknown masternode - vin: %s\n", vote.vin.prevout.hash.ToString());
             mnodeman.AskForMN(pfrom, vote.vin);
             return;
-        }else if(mPillarCollaterals.count(pmn -> vin.prevout) == 0){
+        }else if(mnodeman.IsPillar(pmn -> vin.prevout) == 0){
             return;
         }
-
 
         mapSeenMasternodeBudgetVotes.insert(std::make_pair(vote.GetHash(), vote));
         if (!vote.SignatureValid(true)) {
@@ -760,6 +760,10 @@ bool CBudgetManager::UpdateProposal(CBudgetVote& vote, CNode* pfrom, std::string
         return false;
     }
 
+    if(vote.nVote == 3){
+        mapProposals.erase(vote.nProposalHash);
+        return true;
+    }
 
     return mapProposals[vote.nProposalHash].AddOrUpdateVote(vote, strError);
 }
@@ -798,34 +802,29 @@ CBudgetProposal::CBudgetProposal(const CBudgetProposal& other)
 
 bool CBudgetProposal::Sign()
 {
-    if (!mapArgs.count("-sporkkey")) // spork priv key
-    {
+    if (!mapArgs.count("-sporkkey")){
         LogPrint("mnbudget","CBudgetProposal::Sign - Error missing sporkkey");
         return false;
     }
 
-    std::string sporkkey = GetArg("-sporkkey", "");
-    CKey keyMasternode;
-    CPubKey pubKeyMasternode(ParseHex(Params().SporkKey()));
-
-    // Choose coins to use
-    CPubKey pubKeyCollateralAddress;
-    CKey keyCollateralAddress;
+    std::string spork_key = GetArg("-sporkkey", "");
+    CKey key;
+    CPubKey pub_key(ParseHex(Params().SporkKey()));
 
     std::string errorMessage;
     std::string strMessage = GetHash().GetHex();
 
-    if (!obfuScationSigner.SetKey(sporkkey, errorMessage, keyMasternode, pubKeyMasternode)) {
+    if (!obfuScationSigner.SetKey(spork_key, errorMessage, key, pub_key)) {
         LogPrint("mnbudget","CBudgetProposal::Sign - Error upon calling SetKey: %s\n", errorMessage);
         return false;
     }
 
-    if (!obfuScationSigner.SignMessage(strMessage, errorMessage, vchSig, keyMasternode)) {
+    if (!obfuScationSigner.SignMessage(strMessage, errorMessage, vchSig, key)) {
         LogPrint("mnbudget","CBudgetProposal::Sign - Error upon calling SignMessage: %s\n", errorMessage);
         return false;
     }
 
-    if (!obfuScationSigner.VerifyMessage(pubKeyMasternode, vchSig, strMessage, errorMessage)) {
+    if (!obfuScationSigner.VerifyMessage(pub_key, vchSig, strMessage, errorMessage)) {
         LogPrint("mnbudget","CBudgetProposal::Sign - Error upon calling VerifyMessage: %s\n", errorMessage);
         return false;
     }
@@ -1061,12 +1060,12 @@ void CBudgetVote::Relay()
 
 bool CBudgetVote::Sign(CKey& keyMasternode, CPubKey& pubKeyMasternode)
 {
-    // Choose coins to use
-    CPubKey pubKeyCollateralAddress;
-    CKey keyCollateralAddress;
-
-    std::string errorMessage;
-    std::string strMessage = vin.prevout.ToStringShort() + nProposalHash.ToString() + std::to_string(nVote) + std::to_string(nTime);
+    std::string errorMessage = "";
+    std::string strMessage;
+    if(nVote == 3)
+        strMessage = nProposalHash.ToString() + std::to_string(nVote) + std::to_string(nTime);
+    else
+        strMessage = vin.prevout.ToStringShort() + nProposalHash.ToString() + std::to_string(nVote) + std::to_string(nTime);
 
     if (!obfuScationSigner.SignMessage(strMessage, errorMessage, vchSig, keyMasternode)) {
         LogPrint("mnbudget","CBudgetVote::Sign - Error upon calling SignMessage");
@@ -1083,6 +1082,17 @@ bool CBudgetVote::Sign(CKey& keyMasternode, CPubKey& pubKeyMasternode)
 
 bool CBudgetVote::SignatureValid(bool fSignatureCheck)
 {
+    if(nVote == 3){
+        std::string strMessage = nProposalHash.ToString() + std::to_string(nVote) + std::to_string(nTime);
+        CPubKey pubkeynew(ParseHex(Params().SporkKey()));
+        std::string errorMessage = "";
+        if (obfuScationSigner.VerifyMessage(pubkeynew, vchSig, strMessage, errorMessage)) {
+            return true;
+        }
+
+        return false;
+    }
+
     std::string errorMessage;
     std::string strMessage = vin.prevout.ToStringShort() + nProposalHash.ToString() + std::to_string(nVote) + std::to_string(nTime);
 
@@ -1093,7 +1103,7 @@ bool CBudgetVote::SignatureValid(bool fSignatureCheck)
             LogPrint("mnbudget","CBudgetVote::SignatureValid() - Unknown Masternode - %s\n", vin.prevout.hash.ToString());
         }
         return false;
-    }else if(mPillarCollaterals.count(pmn -> vin.prevout) == 0){
+    }else if(mnodeman.IsPillar(pmn -> vin.prevout) == 0){
         return false;
     }
 

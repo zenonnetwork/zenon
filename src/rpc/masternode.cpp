@@ -431,17 +431,12 @@ UniValue startmasternode (const UniValue& params, bool fHelp)
             //check before relaying a mn
             bool result = true;
             COutPoint current_outpoint(uint256S(mne.getTxHash()), nIndex);
-            for(int i = 0; i < (int)vPillarCollaterals.size(); i++){
-                if(vPillarCollaterals[i].first == current_outpoint){
-                    if((i + 1) > MAX_PILLARS_ALLOWED){
-                        result = false;
-                        failed++;
-                        errorMessage = "There are no slots available for pillars!\n";
-                        statusObj.push_back(Pair("error", errorMessage));
-                        resultsObj.push_back(statusObj);
-                    }
-                    break;
-                }
+            if(mnodeman.CanBePillar(current_outpoint) == 0){
+                    result = false;
+                    failed++;
+                    errorMessage = "There are no slots available for pillars!\n";
+                    statusObj.push_back(Pair("error", errorMessage));
+                    resultsObj.push_back(statusObj);
             }
 
             if(!result)
@@ -494,16 +489,12 @@ UniValue startmasternode (const UniValue& params, bool fHelp)
                 int nIndex;
                 mne.castOutputIndex(nIndex);
                 COutPoint current_outpoint(uint256S(mne.getTxHash()), nIndex);
-                for(int i = 0; i < (int)vPillarCollaterals.size(); i++){
-                    if(vPillarCollaterals[i].first == current_outpoint){
-                        if((i + 1) > MAX_PILLARS_ALLOWED){
-                            result = false;
-                            failed++;
-                            errorMessage = "There are no available slots for pillars\n!";
-                            statusObj.push_back(Pair("errorMessage", errorMessage));
-                        }
-                        break;
-                    }
+                if(mnodeman.CanBePillar(current_outpoint) == 0){
+                    result = false;
+                    failed++;
+                    errorMessage = "There are no available slots for pillars\n!";
+                    statusObj.push_back(Pair("errorMessage", errorMessage));
+                    break;
                 }
 
                 if(!result)
@@ -643,7 +634,7 @@ UniValue getpillarslots(const UniValue& params, bool fHelp){
     UniValue ret(UniValue::VARR);
     UniValue obj(UniValue::VOBJ);
 
-    int slots = vPillarCollaterals.size() < MAX_PILLARS_ALLOWED ? MAX_PILLARS_ALLOWED - vPillarCollaterals.size() : 0;
+    int slots = mnodeman.PillarSlots();
     obj.push_back(Pair("available_slots", slots));
     ret.push_back(obj);
 

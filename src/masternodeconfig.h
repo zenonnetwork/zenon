@@ -7,8 +7,7 @@
 #ifndef SRC_MASTERNODECONFIG_H_
 #define SRC_MASTERNODECONFIG_H_
 
-#include <main.h>
-
+#include <masternodeman.h>
 #include <string>
 #include <vector>
 
@@ -128,7 +127,7 @@ public:
                 continue;
 
             COutPoint outpoint = COutPoint(mnTxHash, nIndex);
-            if(mPillarCollaterals.count(outpoint) == 0)
+            if(mnodeman.IsPillar(outpoint) == 0)
                 continue;
             ans++;
         }

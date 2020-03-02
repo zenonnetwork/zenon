@@ -1486,6 +1486,9 @@ bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant* grantOu
     if (fOneShot)
         pnode->fOneShot = true;
 
+    mnodeman.DsegUpdate(pnode);
+    pnode->PushMessage("mnget", 0); //sync payees
+
     return true;
 }
 

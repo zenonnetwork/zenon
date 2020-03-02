@@ -22,6 +22,12 @@
 /** Masternode manager */
 CMasternodeMan mnodeman;
 
+int GetMasternodeDsegSeconds() {
+	if(IsSporkActive(SPORK_14_NEW_VOTING_ENFORCEMENT))
+		return (60 * 60);
+	return (3 * 60 * 60);
+}
+
 struct CompareLastPaid {
     bool operator()(const std::pair<int64_t, CTxIn>& t1,
         const std::pair<int64_t, CTxIn>& t2) const
@@ -445,7 +451,7 @@ void CMasternodeMan::DsegUpdate(CNode* pnode)
     }
 
     pnode->PushMessage("dseg", CTxIn());
-    int64_t askAgain = GetTime() + MASTERNODES_DSEG_SECONDS;
+    int64_t askAgain = GetTime() + GetMasternodeDsegSeconds();
     mWeAskedForMasternodeList[pnode->addr] = askAgain;
 }
 
@@ -506,10 +512,12 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
 
     double ratio = 1;
     if(!(count_mns == 0 && count_pillars == 0))
-        ratio = double(4 * count_pillars * 100) / (count_mns + count_pillars * 4);
-
+        ratio = (double)(4.0 * count_pillars * 100) / (count_mns + count_pillars * 4.0);
+    
+    InitRatios();
+    vLastRatios[nBlockHeight % 10] = ratio;
+    
     bool block_winner;
-
     if(nBlockHeight % 100 >= floor(ratio)){
         block_winner = 0;
     }else{
@@ -525,7 +533,6 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
     /*
         Make a vector with all of the last paid times
     */
-
     int nMnCount = CountEnabled();
     for (CMasternode& mn : vMasternodes)
         if((mn.isPillar ^ block_winner) == 0){
@@ -607,53 +614,19 @@ CMasternode* CMasternodeMan::GetCurrentMasterNode(int mod, int64_t nBlockHeight,
 {
     int64_t score = 0;
     CMasternode* winner = NULL;
-    
-    if (chainActive.Tip() == NULL) 
-        return winner;
-    if (nBlockHeight == 0)
-        nBlockHeight = chainActive.Tip()->nHeight + 1;
-
-    int count_pillars = 0;
-    int count_mns = 0;
-    for (CMasternode& mn : vMasternodes){
-        if(mn.isPillar == 1 && mn.IsEnabled())
-            count_pillars++;
-        if(mn.isPillar == 0 && mn.IsEnabled())
-            count_mns++;
-    }
-
-    double ratio = 1;
-    if(!(count_mns == 0 && count_pillars == 0))
-        ratio = double(4 * count_pillars * 100) / (count_mns + count_pillars * 4);
-
-    bool block_winner;
-
-    if(nBlockHeight % 100 >= floor(ratio)){
-        block_winner = 0;
-    }else{
-        block_winner = 1;
-    }
-
-    if(count_pillars == 0){
-        block_winner = 0;
-    }else if(count_mns == 0){
-        block_winner = 1;
-    }
 
     // scan for winner
     for (CMasternode& mn : vMasternodes){
-        if((mn.isPillar ^ block_winner) == 0){
-            mn.Check();
-            if (mn.protocolVersion < minProtocol || !mn.IsEnabled()) continue;
-            // calculate the score for each Masternode
-            uint256 n = mn.CalculateScore(mod, nBlockHeight);
-            int64_t n2 = n.GetCompact(false);
+        mn.Check();
+        if (mn.protocolVersion < minProtocol || !mn.IsEnabled()) continue;
+        // calculate the score for each Masternode
+        uint256 n = mn.CalculateScore(mod, nBlockHeight);
+        int64_t n2 = n.GetCompact(false);
 
-            // determine the winner
-            if (n2 > score) {
-                score = n2;
-                winner = &mn;
-            }
+        // determine the winner
+        if (n2 > score) {
+            score = n2;
+            winner = &mn;
         }
     }
     
@@ -804,23 +777,18 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
 
         int nDoS = 0;
         
-        // check when receiving a mnb to not accept it
-        if(mPillarCollaterals.count(mnb.vin.prevout) > 0){
-            for(int i = 0; i < (int)vPillarCollaterals.size(); i++)
-                if(vPillarCollaterals[i].first == mnb.vin.prevout){
-                    if((i + 1) > MAX_PILLARS_ALLOWED){
-                        nDoS = 100;
-                        Misbehaving(pfrom -> GetId(), nDoS);
-                        return;
-                    }
-                    break;
-                }
+        if(mnodeman.CanBePillar(mnb.vin.prevout) == 0){
+            nDoS = 100;
+            Misbehaving(pfrom -> GetId(), nDoS);
+            return;
         }
+        // check when receiving a mnb to not accept it
 
         if (mapSeenMasternodeBroadcast.count(mnb.GetHash())) { //seen
             masternodeSync.AddedMasternodeList(mnb.GetHash());
             return;
         }
+
         mapSeenMasternodeBroadcast.insert(std::make_pair(mnb.GetHash(), mnb));
 
         if (!mnb.CheckAndUpdate(nDoS)) {
@@ -898,7 +866,7 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
                         return;
                     }
                 }
-                int64_t askAgain = GetTime() + MASTERNODES_DSEG_SECONDS;
+                int64_t askAgain = GetTime() + GetMasternodeDsegSeconds();
                 mAskedUsForMasternodeList[pfrom->addr] = askAgain;
             }
         } //else, asking for a specific node which is ok
@@ -973,4 +941,118 @@ std::string CMasternodeMan::ToString() const
     info << "Masternodes: " << (int)vMasternodes.size() << ", peers who asked us for Masternode list: " << (int)mAskedUsForMasternodeList.size() << ", peers we asked for Masternode list: " << (int)mWeAskedForMasternodeList.size() << ", entries in Masternode list we asked for: " << (int)mWeAskedForMasternodeListEntry.size() << ", nDsqCount: " << (int)nDsqCount;
 
     return info.str();
+}
+
+void CMasternodeMan::InitRatios(){
+    if(vLastRatios.size() != 10){
+        vLastRatios.clear();
+        for(int i = 0; i < 10; i++)
+            vLastRatios.push_back(-1);
+    }
+}
+
+int CMasternodeMan::PillarCount(int protocolVersion){
+    int count = 0;
+    protocolVersion = protocolVersion == -1 ? ActiveProtocol() : protocolVersion;
+    for(CMasternode& mn : vMasternodes){
+        if(mn.protocolVersion < protocolVersion || !mn.IsEnabled()) 
+            continue;
+        if(mn.isPillar)
+            count++;
+    }
+    return count;
+}
+
+bool CMasternodeMan::CanBePillar(const COutPoint& utxo){
+    if(mPillarCollaterals.count(utxo) > 0){
+        for(int i = 0; i < (int)vPillarCollaterals.size(); i++)
+            if(vPillarCollaterals[i].first == utxo){
+                if((i + 1) > MAX_PILLARS_ALLOWED){
+                    return false;
+                }
+                return true;
+            }
+    }
+
+    return true;
+}
+
+void CMasternodeMan::AddPillarUtxo(const COutPoint& first, std::pair<int, int> second){
+    vPillarCollaterals.push_back(std::make_pair(first, second));
+    mPillarCollaterals.insert(std::make_pair(first, second));
+}
+
+void CMasternodeMan::DeletePillarUtxo(const COutPoint& outpoint){
+    mPillarCollaterals.erase(outpoint);
+    for(int k = 0; k < (int)vPillarCollaterals.size(); k++)
+        if(vPillarCollaterals[k].first == outpoint){
+            vPillarCollaterals.erase(vPillarCollaterals.begin() + k);
+            break;
+        }
+}
+
+struct less_than_key{
+    inline bool operator() (const std::pair<COutPoint, std::pair<int, int> >& a, const std::pair<COutPoint, std::pair<int, int> >& b){
+        if(a.second.first == b.second.first){ // nBlockHeight
+            if(a.second.second == b.second.second) // same tx index
+                return a.first.n < b.first.n;
+            return a.second.second < b.second.second;
+        }
+        
+        return a.second.first < b.second.first;
+    }
+};
+
+bool CMasternodeMan::InitPillars(){
+    LOCK(cs_main);
+
+    InitRatios();
+    
+    int left = last_block_scanned < PLI_START ? PLI_START : last_block_scanned;
+    while(left <= chainActive.Height()){
+        CBlockIndex* block_index = chainActive[left];
+        CBlock current_block;
+        if(ReadBlockFromDisk(current_block, block_index)){
+            int tx_count = 0;
+            for(const CTransaction& current_tx: current_block.vtx){
+                int n = 0;
+                for(const CTxOut current_vout: current_tx.vout){
+                    if(current_vout.nValue == MNP * COIN){
+                        if(left <= PLI_END){
+                            MAX_PILLARS_ALLOWED++;
+                        }
+                        COutPoint temp_outpoint(current_tx.GetHash(), n);
+                        mPillarCollaterals.insert(std::make_pair(temp_outpoint, std::make_pair(left, tx_count)));
+                    }
+                    n++;
+                }
+                for(const CTxIn current_vin : current_tx.vin){
+                    if(mPillarCollaterals.count(current_vin.prevout) > 0){
+                        if(left <= PLI_END){
+                            MAX_PILLARS_ALLOWED--;
+                        }
+                        mPillarCollaterals.erase(current_vin.prevout);
+                    }
+                }
+                tx_count++;
+            }
+            last_block_scanned = left;
+        }else{
+            return false;
+        }
+        left++;
+    }
+
+    for(auto& itr: vPillarCollaterals)
+        mPillarCollaterals.insert(std::make_pair(itr.first, itr.second));
+    
+    vPillarCollaterals.clear();
+
+    for(auto& itr: mPillarCollaterals){
+        vPillarCollaterals.push_back(std::make_pair(COutPoint(itr.first), itr.second));
+    }
+
+    std::sort(vPillarCollaterals.begin(), vPillarCollaterals.end(), less_than_key());
+
+    return true;
 }

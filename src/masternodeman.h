@@ -16,11 +16,9 @@
 #include "util.h"
 
 #define MASTERNODES_DUMP_SECONDS (15 * 60)
-#define MASTERNODES_DSEG_SECONDS (3 * 60 * 60)
-
 
 class CMasternodeMan;
-
+extern int GetMasternodeDsegSeconds();
 extern CMasternodeMan mnodeman;
 void DumpMasternodes();
 
@@ -48,6 +46,13 @@ public:
     ReadResult Read(CMasternodeMan& mnodemanToLoad, bool fDryRun = false);
 };
 
+class hash_by_outpoint{
+    public:
+        size_t operator() (const COutPoint& to_hash) const {
+            return (std::hash<std::string>()(to_hash.ToString()));
+        }
+};
+
 class CMasternodeMan
 {
 private:
@@ -66,6 +71,16 @@ private:
     // which Masternodes we've asked for
     std::map<COutPoint, int64_t> mWeAskedForMasternodeListEntry;
 
+    // the number of pillar utxo made in the pli stage
+    unsigned int MAX_PILLARS_ALLOWED;
+    // array for all pillar utxo
+    std::vector<std::pair<COutPoint, std::pair<int, int> > > vPillarCollaterals;
+    // map for all pillar utxo
+    std::unordered_map<COutPoint, std::pair<int, int>, hash_by_outpoint> mPillarCollaterals;
+    // checkpoint for pillar utxo scan
+    unsigned int last_block_scanned;
+    // hold the last 10 ratios for node voting
+    std::vector<double> vLastRatios;
 public:
     // Keep track of all broadcasts I've seen
     std::map<uint256, CMasternodeBroadcast> mapSeenMasternodeBroadcast;
@@ -89,6 +104,10 @@ public:
 
         READWRITE(mapSeenMasternodeBroadcast);
         READWRITE(mapSeenMasternodePing);
+
+        READWRITE(MAX_PILLARS_ALLOWED);
+        READWRITE(vPillarCollaterals);
+        READWRITE(last_block_scanned);
     }
 
     CMasternodeMan();
@@ -143,26 +162,39 @@ public:
 
     void ProcessMessage(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
 
-    // return the number of active pillars
-    int pillar_count(int protocolVersion = -1){
-        int count = 0;
-        protocolVersion = protocolVersion == -1 ? ActiveProtocol() : protocolVersion;
-        for(CMasternode& mn : vMasternodes){
-            if(mn.protocolVersion < protocolVersion || !mn.IsEnabled()) 
-                continue;
-            if(mn.isPillar)
-                count++;
-        }
-        return count;
+    void UpdateLastScannedBlock(int nHeight){
+        last_block_scanned = nHeight;
     }
+
+    // return the number of active pillars
+    int PillarCount(int protocolVersion = -1);
     
-    int pillar_slots(){
+    int PillarSlots(){
         return vPillarCollaterals.size() < MAX_PILLARS_ALLOWED ? MAX_PILLARS_ALLOWED - vPillarCollaterals.size() : 0;
     }
     
-    bool isPillar(COutPoint vout){
-        return mPillarCollaterals.count(vout) > 0;
+    bool IsPillar(const COutPoint& utxo){
+        return mPillarCollaterals.count(utxo) > 0;
     }
+
+    bool CanBePillar(const COutPoint& utxo);
+
+    // bootstrap for pillar utxos
+    bool InitPillars();
+
+    void InitRatios();
+
+    void IncrementMaxPillarsAllowed(){
+        MAX_PILLARS_ALLOWED++;
+    }
+
+    void DecrementMaxPillarsAllowed(){
+        MAX_PILLARS_ALLOWED--;
+    }
+
+    void AddPillarUtxo(const COutPoint& first, std::pair<int, int> second);
+
+    void DeletePillarUtxo(const COutPoint& outpoint);
 
     /// Return the number of (unique) Masternodes and Pillars
     int size() {
@@ -181,5 +213,6 @@ public:
     /// Update masternode list and maps using provided CMasternodeBroadcast
     void UpdateMasternodeList(CMasternodeBroadcast mnb);
 };
+
 
 #endif

@@ -60,6 +60,10 @@ class CValidationState;
 struct CBlockTemplate;
 struct CNodeStateStats;
 
+// pillar lock-in period
+static const unsigned int PLI_START = 365760;
+static const unsigned int PLI_END = 385920;
+
 /** Default for -blockmaxsize and -blockminsize, which control the range of sizes the mining code will create **/
 static const unsigned int DEFAULT_BLOCK_MAX_SIZE = 750000;
 static const unsigned int DEFAULT_BLOCK_MIN_SIZE = 0;
@@ -654,25 +658,5 @@ struct CBlockTemplate {
     std::vector<CAmount> vTxFees;
     std::vector<int64_t> vTxSigOps;
 };
-
-//////////////
-/// pli section start
-
-class hash_by_outpoint{
-    public:
-        size_t operator() (const COutPoint& to_hash) const {
-            return (std::hash<std::string>()(to_hash.ToString()));
-        }
-};
-
-extern unsigned int MAX_PILLARS_ALLOWED;
-extern std::vector<std::pair<COutPoint, std::pair<int, int> > > vPillarCollaterals;
-extern std::unordered_map<COutPoint, std::pair<int, int>, hash_by_outpoint> mPillarCollaterals;
-static const unsigned int PLI_START = 365760;
-static const unsigned int PLI_END = 385920;
-bool InitPillars();
-
-/// pli section end
-/////////////
 
 #endif // BITCOIN_MAIN_H
