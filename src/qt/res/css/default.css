@@ -670,7 +670,7 @@ QTableView::item { /* Table Item */
 QTableView::item:selected { /* Table Item Selected */
     background-color:#6FF34D;
     color:#181718;
-        border:none;
+    border:none;
     qproperty-showGrid: false;
 }
 

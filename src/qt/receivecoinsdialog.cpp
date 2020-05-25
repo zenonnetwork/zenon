@@ -92,8 +92,7 @@ void ReceiveCoinsDialog::setModel(WalletModel* model)
         address = settings.value("current_receive_address").toString();
         if (address.isEmpty())
             address = getAddress();
-        ui->reqAddress->setText(address);
-
+        
         connect(model, SIGNAL(notifyReceiveAddressChanged()), this, SLOT(receiveAddressUsed()));
     }
 }

@@ -13,6 +13,7 @@
 #include "checkpoints.h"
 #include "primitives/block.h"
 #include "protocol.h"
+#include "timedata.h"
 #include "uint256.h"
 
 #include "libzerocoin/Params.h"
@@ -84,7 +85,14 @@ public:
 
     /** returns the max future time (and drift in seconds) allowed for a block in the future **/
     int FutureBlockTimeDrift(const bool isPoS) const { return isPoS ? nFutureTimeDriftPoS : nFutureTimeDriftPoW; }
-    uint32_t MaxFutureBlockTime(uint32_t time, const bool isPoS) const { return time + FutureBlockTimeDrift(isPoS); }
+    int64_t MaxFutureBlockTime(int64_t time, const bool isPoS) const { return time + FutureBlockTimeDrift(isPoS); }
+
+    /** Time Protocol V2 **/
+    int BlockStartTimeProtocolV2() const { return nBlockTimeProtocolV2; }
+    bool IsTimeProtocolV2(const int nHeight) const { return nHeight >= BlockStartTimeProtocolV2(); }
+    int TimeSlotLength() const { return nTimeSlotLength; }
+    int FutureBlockTimeDrift(const int nHeight) const;
+    bool IsValidBlockTimeStamp(const int64_t nTime, const int nHeight) const;
 
     CAmount MaxMoneyOut() const { return nMaxMoneyOut; }
     /** The masternode count that we will allow the see-saw reward payments to be off by */
@@ -167,6 +175,7 @@ protected:
     int nStakeMinDepth;
     int nFutureTimeDriftPoW;
     int nFutureTimeDriftPoS;
+    int nTimeSlotLength;
 
     int nModifierUpdateBlock;
     CAmount nMaxMoneyOut;
@@ -217,7 +226,7 @@ protected:
     int nBlockDoubleAccumulated;
     int nPublicZCSpends;
     int nBlockStakeModifierlV2;
-
+    int nBlockTimeProtocolV2;
     // fake serial attack
     int nFakeSerialBlockheightEnd = 0;
     CAmount nSupplyBeforeFakeSerial = 0;

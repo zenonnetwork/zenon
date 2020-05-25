@@ -11,12 +11,10 @@
 #include "random.h"
 #include "util.h"
 #include "utilstrencodings.h"
-
 #include <assert.h>
 
 #include <boost/assign/list_of.hpp>
 #include <limits>
-
 
 struct SeedSpec6 {
     uint8_t addr[16];
@@ -62,11 +60,12 @@ boost::assign::map_list_of
 (       260800, uint256("3ddcff914ca6f0b20cccb8359080956edd867a5ac05c2816a514c64530408dad"))
 (       364495, uint256("9361ddeb9b6f02f2183eaee333493809e129cc26617bb88e1a44499600e3a79b"))
 (       367400, uint256("706a49d643e24be3aecf7662a504e17058275b7de06bcea372f4443172d55395"))
-(       436500, uint256("e0a601f06e56f85ba3f85d8253bf44944feee96142af79d58f6660a22ca55b7f"));
+(       436500, uint256("e0a601f06e56f85ba3f85d8253bf44944feee96142af79d58f6660a22ca55b7f"))
+(       632200, uint256("8698efc57eee9f4e63df4ce3c1d7ba10d2ff89b5c927657caee4356d6593473a"));
 static const Checkpoints::CCheckpointData data = {
     &mapCheckpoints,
-    1579187374, // * UNIX timestamp of last checkpoint block
-    1135259, // * total number of transactions between genesis and last checkpoint
+    1590410628, // * UNIX timestamp of last checkpoint block
+    1531358, // * total number of transactions between genesis and last checkpoint
     //   (the tx=... number in the SetBestChain debug.log lines)
     2000        // * estimated number of transactions per day after checkpoint
 };
@@ -116,6 +115,27 @@ bool CChainParams::HasStakeMinAgeOrDepth(const int contextHeight, const uint32_t
     return (contextHeight - utxoFromBlockHeight >= nStakeMinDepth);
 }
 
+int CChainParams::FutureBlockTimeDrift(const int nHeight) const
+{
+    if (IsTimeProtocolV2(nHeight))
+        // PoS (TimeV2): 14 seconds
+        return TimeSlotLength() - 1;
+
+    // PoS (TimeV1): 3 minutes
+    // PoW: 2 hours
+    return (nHeight > LAST_POW_BLOCK()) ? nFutureTimeDriftPoS : nFutureTimeDriftPoW;
+}
+
+bool CChainParams::IsValidBlockTimeStamp(const int64_t nTime, const int nHeight) const
+{
+    // Before time protocol V2, blocks can have arbitrary timestamps
+    if (!IsTimeProtocolV2(nHeight))
+        return true;
+
+    // Time protocol v2 requires time in slots
+    return (nTime % TimeSlotLength()) == 0;
+}
+
 class CMainParams : public CChainParams
 {
 public:
@@ -159,12 +179,13 @@ public:
         nBlockFirstFraudulent = 2147483000;         // First block that bad serials emerged (currently we do not have any)
         nBlockLastGoodCheckpoint = 2147483000;      // Last valid accumulator checkpoint (currently we do not have any)
         nBlockEnforceInvalidUTXO = 120555;      // Start enforcing the invalid UTXO's
-        nInvalidAmountFiltered = 7779.9*COIN;      // Amount of invalid coins filtered through exchanges
+        nInvalidAmountFiltered = 7779.9 * COIN;      // Amount of invalid coins filtered through exchanges
         nBlockZerocoinV2 = 2147483000;              // !> The block that zerocoin v2 becomes active - roughly Tuesday, May 8, 2018 4:00:00 AM GMT
         nBlockStakeModifierlV2 = 260720;
-
+        nTimeSlotLength = 15;
         // Fake Serial Attack
         nFakeSerialBlockheightEnd = 1686215;
+        nBlockTimeProtocolV2 = 640000;
 
         /**
          * Build the genesis block. Note that the output of the genesis coinbase cannot
@@ -208,8 +229,6 @@ public:
         vSeeds.push_back(CDNSSeedData("zenon.one", "alpha-3.zenon.one"));
         vSeeds.push_back(CDNSSeedData("znn.one", "alpha-4.znn.one"));
         vSeeds.push_back(CDNSSeedData("znn.space", "alpha-5.znn.space"));
-        
-        
         
         
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 80);

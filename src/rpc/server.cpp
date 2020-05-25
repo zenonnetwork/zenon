@@ -384,6 +384,7 @@ static const CRPCCommand vRPCCommands[] =
         {"Zenon", "getpillarslots", &getpillarslots, true, true, false},
         {"Zenon", "listpillars", &listpillars, true, true, false},
         {"Zenon", "getpillarstatus", &getpillarstatus, true, true, false},
+        {"Zenon", "getpillarsqueue", &getpillarsqueue, true, true, false},
 
 #ifdef ENABLE_WALLET
         /* Wallet */

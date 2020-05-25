@@ -173,6 +173,12 @@ public:
         return vPillarCollaterals.size() < MAX_PILLARS_ALLOWED ? MAX_PILLARS_ALLOWED - vPillarCollaterals.size() : 0;
     }
     
+    int PillarQueueSize(){
+        return vPillarCollaterals.size() > MAX_PILLARS_ALLOWED ? vPillarCollaterals.size() - MAX_PILLARS_ALLOWED : 0;
+    }
+
+    std::vector<std::pair<int, std::string> > PillarQueuePositions();
+
     bool IsPillar(const COutPoint& utxo){
         return mPillarCollaterals.count(utxo) > 0;
     }

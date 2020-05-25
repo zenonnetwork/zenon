@@ -603,7 +603,6 @@ UniValue getpillaroutputs (const UniValue& params, bool fHelp)
             "  }\n"
             "  ,...\n"
             "]\n"
-
             "\nExamples:\n" +
             HelpExampleCli("getpillaroutputs", "") + HelpExampleRpc("getpillaroutputs", ""));
 
@@ -628,8 +627,9 @@ UniValue getpillarslots(const UniValue& params, bool fHelp){
             "\nPrint the number of availalbe slots for pillar\n"
             "\nResult:\n"
             "\"available_slots\": n, (numeric)\n"
-            "\n Examples:\n" +
-            HelpExampleCli("getpillarslots", "") + HelpExampleRpc("getpillarslots", ""));
+            "\nExamples:\n" +
+            HelpExampleCli("getpillarslots", "") + HelpExampleRpc("getpillarslots", "")
+        );
 
     UniValue ret(UniValue::VARR);
     UniValue obj(UniValue::VOBJ);
@@ -640,6 +640,41 @@ UniValue getpillarslots(const UniValue& params, bool fHelp){
 
     return ret;
 }
+
+UniValue getpillarsqueue(const UniValue& params, bool fHelp){
+    if(fHelp || (params.size() != 0)){
+        throw std::runtime_error(
+            "getpillarsqeue\n"
+            "\nPrint the number of Pillar utxos in queue and the positions of my utxos if any\n"
+            "\nResult:\n"
+            "\"queue_size\": n, (numeric)\n"
+            "\n["
+            "  {\n"
+            "    \"position\": n, (numeric)\n"
+            "    \"utxo\": \"xxxx\", (string)\n"
+            "  }\n"
+            "]\n"
+            "\nExamples:\n" +
+            HelpExampleCli("getpillarsqueue", "") + HelpExampleRpc("getpillarsqueue", "")
+        );
+    }
+
+    UniValue ret(UniValue::VARR);
+    UniValue obj(UniValue::VOBJ);
+
+    int queue_size = mnodeman.PillarQueueSize();
+    obj.push_back(Pair("queue_size", queue_size));
+    ret.push_back(obj);
+    std::vector<std::pair<int, std::string> > my_positions = mnodeman.PillarQueuePositions();
+    for(int i = 0; i < (int)my_positions.size(); i++){
+        UniValue pos(UniValue::VOBJ);
+        pos.push_back(Pair("position", my_positions[i].first));
+        pos.push_back(Pair("utxo", my_positions[i].second));
+        ret.push_back(obj);
+    }
+    return ret;
+}
+
 
 UniValue listmasternodeconf (const UniValue& params, bool fHelp)
 {

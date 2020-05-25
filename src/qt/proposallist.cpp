@@ -70,8 +70,6 @@ ProposalList::ProposalList(QWidget *parent) :
 
     connect(ui->tableViewMyProposals, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenu(QPoint)));
     connect(ui->tableViewMyProposals, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(openProposalUrl()));
-
-	// connect(ui->createButton, SIGNAL(clicked()), this, SLOT(on_createButton_clicked()));
 	
     connect(voteYesAction, SIGNAL(triggered()), this, SLOT(on_voteYesButton_clicked()));
     connect(voteAbstainAction, SIGNAL(triggered()), this, SLOT(on_voteAbstainButton_clicked()));
@@ -90,11 +88,10 @@ ProposalList::ProposalList(QWidget *parent) :
     if(masternodeConfig.isPillarOwner()){
         ui->tableViewMyProposals->setContextMenuPolicy(Qt::CustomContextMenu);
     }
-    // else{
-        ui->voteNoButton->setVisible(false);
-        ui->voteYesButton->setVisible(false);
-        ui->voteAbstainButton->setVisible(false);
-    // }
+    
+    ui->voteNoButton->setVisible(false);
+    ui->voteYesButton->setVisible(false);
+    ui->voteAbstainButton->setVisible(false);
 
     ui->tableViewMyProposals->horizontalHeader()->setDefaultAlignment(Qt::AlignVCenter);
     ui->tableViewMyProposals->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
@@ -138,7 +135,6 @@ void ProposalList::refreshProposals(bool force)
     nLastUpdate = GetTime();
 
     proposalTableModel->refreshProposals();
-
     ui->secondsLabel->setText(tr("List will be updated in 0 second(s)"));
 }
 
@@ -158,11 +154,17 @@ void ProposalList::proposalType(int type)
 
 void ProposalList::contextualMenu(const QPoint &point)
 {
-    QModelIndex index = ui->tableViewMyProposals->indexAt(point);
     QModelIndexList selection = ui->tableViewMyProposals->selectionModel()->selectedRows(0);
     if (selection.empty())
         return;
 
+    int startBlock = selection.at(0).data(ProposalTableModel::StartDateRole).toInt();
+    int endBlock = selection.at(0).data(ProposalTableModel::EndDateRole).toInt();
+    if(chainActive.Height() < startBlock || endBlock < chainActive.Height()){
+        return;
+    }
+
+    QModelIndex index = ui->tableViewMyProposals->indexAt(point);
     if(index.isValid())
         contextMenu->exec(QCursor::pos());
 }
@@ -286,7 +288,7 @@ void ProposalList::openProposalUrl()
 
     QModelIndexList selection = ui->tableViewMyProposals->selectionModel()->selectedRows(0);
     if(!selection.isEmpty())
-         QDesktopServices::openUrl(selection.at(0).data(ProposalTableModel::ProposalUrlRole).toString());
+        QDesktopServices::openUrl(selection.at(0).data(ProposalTableModel::ProposalUrlRole).toString());
 }
 
 void ProposalList::resizeEvent(QResizeEvent* event) 
@@ -324,16 +326,22 @@ void ProposalList::selectionChanged()
         ui->voteNoButton->setVisible(false);
         ui->voteYesButton->setVisible(false);
         ui->voteAbstainButton->setVisible(false);
-    }else{
+    } else {
         if(chainActive.Height() >= StartDateRole && chainActive.Height() <= EndDateRole){
             ui->tableViewMyProposals->setContextMenuPolicy(Qt::CustomContextMenu);
             ui->voteNoButton->setVisible(true);
             ui->voteYesButton->setVisible(true);
             ui->voteAbstainButton->setVisible(true);
-        }else{
+        } else {
             ui->voteNoButton->setVisible(false);
             ui->voteYesButton->setVisible(false);
             ui->voteAbstainButton->setVisible(false); 
         }
+    }
+
+    if(chainActive.Height() >= StartDateRole && chainActive.Height() <= EndDateRole){
+        ui->tableViewMyProposals->setStyleSheet("QTableView::item:selected { background-color:rgb(108,242,73) !important; color:#000000 !important;}");
+    } else {
+        ui->tableViewMyProposals->setStyleSheet("QTableView::item:selected { background-color:#8a8a8a !important; color:#ffffff !important;}");
     }
 }

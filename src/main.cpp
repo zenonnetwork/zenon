@@ -49,7 +49,6 @@
 #include <atomic>
 #include <queue>
 
-
 #if defined(NDEBUG)
 #error "Zenon cannot be compiled without assertions."
 #endif
@@ -4102,12 +4101,6 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
     // transaction validation, as otherwise we may mark the header as invalid
     // because we receive the wrong transactions for it.
 
-    // Check timestamp
-    if (Params().NetworkID() != CBaseChainParams::REGTEST &&
-            block.GetBlockTime() > Params().MaxFutureBlockTime(GetAdjustedTime(), IsPoS)) // 3 minute future drift for PoS
-        return state.Invalid(error("%s : block timestamp too far in the future", __func__),
-            REJECT_INVALID, "time-too-new");
-
     // Check the merkle root.
     if (fCheckMerkleRoot) {
         bool mutated;
@@ -4280,6 +4273,30 @@ bool CheckWork(const CBlock block, CBlockIndex* const pindexPrev)
     return true;
 }
 
+bool CheckBlockTime(const CBlockHeader& block, CValidationState& state, CBlockIndex* const pindexPrev)
+{
+    // Not enforced on RegTest
+    if (Params().NetworkID() != CBaseChainParams::MAIN)
+        return true;
+
+    const int64_t blockTime = block.GetBlockTime();
+    const int blockHeight = pindexPrev->nHeight + 1;
+
+    // Check blocktime against future drift (WANT: blk_time <= Now + MaxDrift)
+    if (blockTime > pindexPrev->MaxFutureBlockTime()){
+        return state.Invalid(error("%s : block timestamp too far in the future", __func__), REJECT_INVALID, "time-too-new");
+    }
+    // Check blocktime against prev (WANT: blk_time > MinPastBlockTime)
+    if (blockTime <= pindexPrev->MinPastBlockTime())
+        return state.DoS(50, error("%s : block timestamp too old", __func__), REJECT_INVALID, "time-too-old");
+
+    // Check blocktime mask
+    if (!Params().IsValidBlockTimeStamp(blockTime, blockHeight))
+        return state.DoS(100, error("%s : block timestamp mask not valid", __func__), REJECT_INVALID, "invalid-time-mask");
+
+    // All good
+    return true;
+}
 bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, CBlockIndex* const pindexPrev)
 {
     uint256 hash = block.GetHash();
@@ -4301,10 +4318,10 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
     if (chainActive.Height() - nHeight >= nMaxReorgDepth)
         return state.DoS(1, error("%s: forked chain older than max reorganization depth (height %d)", __func__, chainActive.Height() - nHeight));
 
-    // Check blocktime against prev (WANT: blk_time > MedianTimePast)
-    if (Params().NetworkID() != CBaseChainParams::REGTEST && block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
-        return state.DoS(50, error("%s : block timestamp too old", __func__), REJECT_INVALID, "time-too-old");
-
+    // Check blocktime (past limit, future limit and mask)
+    if (!CheckBlockTime(block, state, pindexPrev))
+        return false;
+        
     // Check that the block chain matches the known block chain up to a checkpoint
     if (!Checkpoints::CheckBlock(nHeight, hash))
         return state.DoS(100, error("%s : rejected by checkpoint lock-in at %d", __func__, nHeight),
@@ -4709,7 +4726,6 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex, 
                 }
 
         }
-
     }
 
     // Write block to history file
@@ -4727,13 +4743,13 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex, 
             return error("AcceptBlock() : ReceivedBlockTransactions failed");
 
         //check for Pillar vout
-        if(pindex -> nHeight >= PLI_START){    
+        if((unsigned int)pindex -> nHeight >= PLI_START){    
             std::vector<CTransaction> current_txs = block.vtx;
             for(int i = 0; i < (int)current_txs.size(); i++){
                 for(int j = 0; j < (int)current_txs[i].vout.size(); j++){
                     CTxOut temp_vout = current_txs[i].vout[j];
                     if(temp_vout.nValue == MNP * COIN){
-                        if(pindex -> nHeight <= PLI_END)
+                        if((unsigned int)pindex -> nHeight <= PLI_END)
                             mnodeman.IncrementMaxPillarsAllowed();
                         
                         COutPoint temp_outpoint(current_txs[i].GetHash(), j);
@@ -4742,7 +4758,7 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex, 
                 }
                 for(int j = 0; j < (int)current_txs[i].vin.size(); j++)
                     if(mnodeman.IsPillar(current_txs[i].vin[j].prevout)){
-                        if(pindex -> nHeight <= PLI_END)
+                        if((unsigned int)pindex -> nHeight <= PLI_END)
                             mnodeman.DecrementMaxPillarsAllowed();
                         
                         mnodeman.DeletePillarUtxo(current_txs[i].vin[j].prevout);
@@ -5920,7 +5936,7 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
                 !pSporkDB->SporkExists(SPORK_16_ZEROCOIN_MAINTENANCE_MODE) &&
                 !pSporkDB->SporkExists(SPORK_21_NEW_PROTOCOL_ENFORCEMENT_3) &&
 				!pSporkDB->SporkExists(SPORK_22_NEW_PROTOCOL_ENFORCEMENT_4) && 
-                !pSporkDB->SporkExists(SPORK_23_NEW_PROTOCOL_ENFORCEMENT_5) &&
+                !pSporkDB->SporkExists(SPORK_23_NEW_PROTOCOL_ENFORCEMENT_5) && 
                 !pSporkDB->SporkExists(SPORK_24_NEW_PROTOCOL_ENFORCEMENT_6);
 
         if (fMissingSporks || !fRequestedSporksIDB){
@@ -6801,10 +6817,10 @@ bool static ProcessMessage(CNode* pfrom, std::string strCommand, CDataStream& vR
 //       it was the one which was commented out
 int ActiveProtocol()
 {
-    // SPORK_14 is used for 70927 (v 1.6.3)
-    if (IsSporkActive(SPORK_14_NEW_PROTOCOL_ENFORCEMENT))
+    // SPORK_24 is used for 70928 (v1.6.4)
+    if (IsSporkActive(SPORK_24_NEW_PROTOCOL_ENFORCEMENT_6))
         return MIN_PEER_PROTO_VERSION_AFTER_ENFORCEMENT;
-
+        
     return MIN_PEER_PROTO_VERSION_BEFORE_ENFORCEMENT;
 }
 

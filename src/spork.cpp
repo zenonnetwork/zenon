@@ -15,7 +15,6 @@
 #include "sporkdb.h"
 #include "util.h"
 
-
 class CSporkMessage;
 class CSporkManager;
 
@@ -143,9 +142,8 @@ bool IsSporkActive(int nSporkID)
 {
     int64_t r = GetSporkValue(nSporkID);
     if (r == -1) return false;
-    return r < GetTime();
+    return r < GetAdjustedTime();
 }
-
 
 void ReprocessBlocks(int nBlocks)
 {

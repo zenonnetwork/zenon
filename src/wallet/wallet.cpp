@@ -1791,7 +1791,6 @@ static void ApproximateBestSubset(std::vector<std::pair<CAmount, std::pair<const
     }
 }
 
-
 // TODO: find appropriate place for this sort function
 // move denoms down
 bool less_then_denom(const COutput& out1, const COutput& out2)
@@ -2323,7 +2322,7 @@ bool CWallet::CreateCoinStake(
         unsigned int nBits,
         int64_t nSearchInterval,
         CMutableTransaction& txNew,
-        unsigned int& nTxNewTime
+        int64_t& nTxNewTime
         )
 {
     // The following split & combine thresholds are important to security
@@ -2353,7 +2352,6 @@ bool CWallet::CreateCoinStake(
         LogPrintf("CreateCoinStake(): selectStakeCoins failed\n");
         return false;
     }
-
     if (listInputs.empty()) {
         LogPrint("staking", "CreateCoinStake(): listInputs empty\n");
         MilliSleep(50000);
@@ -3278,7 +3276,7 @@ void CWallet::CreateAutoMintTransaction(const CAmount& nMintAmount, CCoinControl
 void CWallet::AutoZeromint()
 {
     // Don't bother Autominting if Zerocoin Protocol isn't active
-    if (GetAdjustedTime() > GetSporkValue(SPORK_16_ZEROCOIN_MAINTENANCE_MODE)) return;
+    if(IsSporkActive(SPORK_16_ZEROCOIN_MAINTENANCE_MODE)) return;
 
     // Wait until blockchain + masternodes are fully synced and wallet is unlocked.
     if (IsInitialBlockDownload() || IsLocked()){

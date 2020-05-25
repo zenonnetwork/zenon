@@ -15,6 +15,7 @@
 #include "masternodeman.h"
 #include "rpc/server.h"
 
+#include "main.h"
 #include "obfuscation.h"
 
 #include "core_io.h"
@@ -149,10 +150,16 @@ QVariant ProposalTableModel::data(const QModelIndex &index, int role) const
         return column_alignments[index.column()];
     case Qt::ForegroundRole:
         if(index.column() == Percentage) {
-            if (rec->percentage < 10) {
+            if (rec->percentage < 51) {
                 return COLOR_NEGATIVE;
             } else {
                 return QColor(23, 168, 26);
+            }
+        } else { 
+            if(rec->start_epoch <= chainActive.Height() && rec->end_epoch >= chainActive.Height()) {
+                return QColor(255, 255, 255);
+            } else {
+                return QColor(85, 85, 85);
             }
         }
         return COLOR_BAREADDRESS;

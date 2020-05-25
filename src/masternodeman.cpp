@@ -965,7 +965,7 @@ int CMasternodeMan::PillarCount(int protocolVersion){
 
 bool CMasternodeMan::CanBePillar(const COutPoint& utxo){
     if(mPillarCollaterals.count(utxo) > 0){
-        for(int i = 0; i < (int)vPillarCollaterals.size(); i++)
+        for(unsigned int i = 0; i < vPillarCollaterals.size(); i++)
             if(vPillarCollaterals[i].first == utxo){
                 if((i + 1) > MAX_PILLARS_ALLOWED){
                     return false;
@@ -975,6 +975,25 @@ bool CMasternodeMan::CanBePillar(const COutPoint& utxo){
     }
 
     return true;
+}
+
+std::vector<std::pair<int, std::string> > CMasternodeMan::PillarQueuePositions(){
+    std::vector<std::pair<int, std::string> > result;
+    if(PillarQueueSize() > 0){
+        std::vector<COutput> possibleUtxos = activeMasternode.SelectCoinsPillar();
+        for(int i = MAX_PILLARS_ALLOWED; i < (int)vPillarCollaterals.size(); i++){
+            COutPoint outpoint(vPillarCollaterals[i].first);
+            for(int j = 0; j < (int)possibleUtxos.size(); j++){
+                uint256 output_tx_hash = possibleUtxos[j].tx->GetHash();
+                uint32_t output_n = possibleUtxos[j].i;
+                if(output_tx_hash == outpoint.hash && output_n == outpoint.n){
+                    result.push_back(std::make_pair(i % MAX_PILLARS_ALLOWED + 1, outpoint.ToStringShort()));
+                }
+            }
+        }
+    }
+
+    return result;
 }
 
 void CMasternodeMan::AddPillarUtxo(const COutPoint& first, std::pair<int, int> second){
@@ -1008,7 +1027,7 @@ bool CMasternodeMan::InitPillars(){
 
     InitRatios();
     
-    int left = last_block_scanned < PLI_START ? PLI_START : last_block_scanned;
+    unsigned int left = last_block_scanned < PLI_START ? PLI_START : last_block_scanned;
     while(left <= chainActive.Height()){
         CBlockIndex* block_index = chainActive[left];
         CBlock current_block;
